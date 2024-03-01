@@ -163,6 +163,7 @@ def main(args):
             samples = samples.to(device, non_blocking=True)
             with torch.cuda.amp.autocast():
                 _, pred = model(samples[:8])
+                pred = model.unpatchify(pred)
             combined = torch.cat((samples, pred), 0)
             save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
 
