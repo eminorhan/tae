@@ -23,6 +23,7 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torchvision.utils import save_image
 
 import dae
 import util.misc as misc
@@ -40,8 +41,8 @@ def get_args_parser():
     parser.add_argument('--model', default='dae_huge_patch14', type=str, help='Name of model to train')
     parser.add_argument('--resume', default='', help='resume from a checkpoint')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
-    parser.add_argument('--mask_ratio', default=0.8, type=float, help='Masking ratio (percentage of removed patches).')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
+    parser.add_argument('--display', action='store_true', help='whether to display reconstruction at the end of each epoch.')
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
@@ -110,7 +111,7 @@ def main(args):
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
 
-    print("Starting MAE training!")
+    print("Starting DAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
         data_loader.sampler.set_epoch(epoch)
@@ -121,7 +122,7 @@ def main(args):
             samples = samples.to(device, non_blocking=True)
 
             with torch.cuda.amp.autocast():
-                loss, _, _ = model(samples, mask_ratio=args.mask_ratio)
+                loss, _ = model(samples)
 
             loss_value = loss.item()
 
@@ -157,6 +158,13 @@ def main(args):
         if misc.is_main_process():
             with (Path(args.output_dir) / (args.save_prefix + "_log.txt")).open("a") as f:
                 f.write(json.dumps(log_stats) + "\n")
+
+        if args.display:
+            samples = samples.to(device, non_blocking=True)
+            with torch.cuda.amp.autocast():
+                _, pred = model(samples[:8])
+            combined = torch.cat((samples, pred), 0)
+            save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
 
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")
