@@ -8,7 +8,6 @@
 # timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
 # DeiT: https://github.com/facebookresearch/deit
 # --------------------------------------------------------
-
 from functools import partial
 from itertools import repeat
 import collections.abc

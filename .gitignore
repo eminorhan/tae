@@ -9,3 +9,5 @@
 
 # Directories
 **/__pycache__
+outputs/
+scripts/

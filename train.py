@@ -96,9 +96,8 @@ def main(args):
     model = DDP(model, device_ids=[args.gpu], find_unused_parameters=True)  # TODO: try FSDP
     model_without_ddp = model.module
     
-    n_parameters = sum(p.numel() for p in model_without_ddp.parameters() if p.requires_grad)
-    print("Model = %s" % str(model_without_ddp))
-    print('Number of params (M): %.2f' % (n_parameters / 1.e6))
+    print(f"Model: {model_without_ddp}")
+    print(f"Number of params (M): {(sum(p.numel() for p in model_without_ddp.parameters() if p.requires_grad) / 1.e6)}")
 
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay, bias_wd=False)
@@ -162,9 +161,9 @@ def main(args):
         if args.display:
             samples = samples.to(device, non_blocking=True)
             with torch.cuda.amp.autocast():
-                _, pred = model(samples[:8])
-                pred = model.unpatchify(pred)
-            combined = torch.cat((samples, pred), 0)
+                _, pred = model(samples[:8, ...])
+                pred = model_without_ddp.unpatchify(pred)
+            combined = torch.cat((samples[:8, ...], pred), 0)
             save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
 
         # start a fresh logger to wipe off old stats
