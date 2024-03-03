@@ -193,6 +193,7 @@ class DAE(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def discretize(self, x):
+        x = F.softmax(x, dim=-1)
         index = x.max(-1, keepdim=True)[1]
         x_hard = torch.zeros_like(x).scatter_(-1, index, 1.0)
         ret = x_hard - x.detach() + x  # straight-through estimator of gradient
@@ -275,6 +276,10 @@ class DAE(nn.Module):
         pred = self.forward_decoder(latent)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred)
         return loss, pred
+
+def dae_large_patch14(**kwargs):
+    model = DAE(patch_size=14, embed_dim=1024, depth=24, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
 
 def dae_huge_patch14(**kwargs):
     model = DAE(patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
