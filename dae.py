@@ -157,6 +157,7 @@ class DAE(nn.Module):
         self.blocks = nn.ModuleList([Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer) for i in range(depth)])
         self.norm = norm_layer(embed_dim)
         self.dict_proj = nn.Linear(embed_dim, vocab_size, bias=True)
+        self.dict_norm = norm_layer(vocab_size)
         # --------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------
@@ -193,7 +194,6 @@ class DAE(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def discretize(self, x):
-        x = F.softmax(x, dim=-1)
         index = x.max(-1, keepdim=True)[1]
         x_hard = torch.zeros_like(x).scatter_(-1, index, 1.0)
         ret = x_hard - x.detach() + x  # straight-through estimator of gradient
@@ -241,6 +241,7 @@ class DAE(nn.Module):
 
         # project to discrete codebook
         x = self.dict_proj(x)
+        x = self.dict_norm(x)
         x = self.discretize(x)
         return x
 
@@ -276,6 +277,10 @@ class DAE(nn.Module):
         pred = self.forward_decoder(latent)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred)
         return loss, pred
+
+def dae_base_patch14(**kwargs):
+    model = DAE(patch_size=14, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
 
 def dae_large_patch14(**kwargs):
     model = DAE(patch_size=14, embed_dim=1024, depth=24, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
