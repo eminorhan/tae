@@ -151,13 +151,13 @@ class DAE(nn.Module):
 
         # --------------------------------------------------------------------------
         # QVAE encoder specifics
+        self.hard_switch = False
         self.patch_embed = PatchEmbed(img_size, patch_size, in_chans, embed_dim)
         num_patches = self.patch_embed.num_patches
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
         self.blocks = nn.ModuleList([Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer) for i in range(depth)])
         self.norm = norm_layer(embed_dim)
-        self.dict_proj = nn.Linear(embed_dim, vocab_size, bias=True)
-        self.dict_norm = norm_layer(vocab_size)
+        self.dict_proj = nn.Linear(embed_dim, vocab_size, bias=False)
         # --------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------
@@ -241,8 +241,10 @@ class DAE(nn.Module):
 
         # project to discrete codebook
         x = self.dict_proj(x)
-        x = self.dict_norm(x)
-        x = self.discretize(x)
+        if self.hard_switch:
+            x = self.discretize(x)
+        else:
+            x = F.softmax(x, dim=-1)
         return x
 
     def forward_decoder(self, x):
@@ -287,9 +289,9 @@ def dae_large_patch14(**kwargs):
     return model
 
 def dae_huge_patch14(**kwargs):
-    model = DAE(patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = DAE(patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=1280, decoder_depth=32, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 def dae_huge_patch14_448(**kwargs):
-    model = DAE(img_size=448, patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = DAE(img_size=448, patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=1280, decoder_depth=32, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model

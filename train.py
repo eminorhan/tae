@@ -113,6 +113,10 @@ def main(args):
     print("Starting DAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
+        # turn on hard switch
+        if epoch > 200:
+            model_without_ddp.hard_switch = True
+
         data_loader.sampler.set_epoch(epoch)
         header = 'Epoch: [{}]'.format(epoch)
 
