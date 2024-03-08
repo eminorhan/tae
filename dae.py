@@ -241,10 +241,9 @@ class DAE(nn.Module):
 
         # project to discrete codebook
         x = self.dict_proj(x)
+        x = F.softmax((epoch/2 + 1.) * x, dim=-1)
         if self.hard_switch:
             x = self.discretize(x)
-        else:
-            x = F.softmax(epoch * x, dim=-1)
         return x
 
     def forward_decoder(self, x):

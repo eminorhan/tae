@@ -125,7 +125,7 @@ def main(args):
             samples = samples.to(device, non_blocking=True)
 
             with torch.cuda.amp.autocast():
-                loss, _ = model(samples, epoch+1)
+                loss, _ = model(samples, epoch)
 
             loss_value = loss.item()
 
@@ -165,7 +165,7 @@ def main(args):
         if args.display:
             samples = samples.to(device, non_blocking=True)
             with torch.cuda.amp.autocast():
-                _, pred = model(samples[:8, ...], epoch+1)
+                _, pred = model(samples[:8, ...], epoch)
                 pred = model_without_ddp.unpatchify(pred)
             combined = torch.cat((samples[:8, ...], pred), 0)
             save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
