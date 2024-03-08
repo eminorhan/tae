@@ -227,7 +227,7 @@ class DAE(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
         return imgs
 
-    def forward_encoder(self, x):
+    def forward_encoder(self, x, epoch):
         # embed patches
         x = self.patch_embed(x)
 
@@ -244,7 +244,7 @@ class DAE(nn.Module):
         if self.hard_switch:
             x = self.discretize(x)
         else:
-            x = F.softmax(x, dim=-1)
+            x = F.softmax(epoch * x, dim=-1)
         return x
 
     def forward_decoder(self, x):
@@ -274,8 +274,8 @@ class DAE(nn.Module):
         loss = loss.mean()  # mean loss per pixel
         return loss
 
-    def forward(self, imgs):
-        latent = self.forward_encoder(imgs)
+    def forward(self, imgs, epoch):
+        latent = self.forward_encoder(imgs, epoch)
         pred = self.forward_decoder(latent)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred)
         return loss, pred

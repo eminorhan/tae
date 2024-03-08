@@ -114,7 +114,7 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs):
 
         # turn on hard switch
-        if epoch > 200:
+        if epoch == 400:
             model_without_ddp.hard_switch = True
 
         data_loader.sampler.set_epoch(epoch)
@@ -125,7 +125,7 @@ def main(args):
             samples = samples.to(device, non_blocking=True)
 
             with torch.cuda.amp.autocast():
-                loss, _ = model(samples)
+                loss, _ = model(samples, epoch+1)
 
             loss_value = loss.item()
 
