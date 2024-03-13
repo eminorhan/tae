@@ -137,7 +137,7 @@ class DAE(nn.Module):
             patch_size=16, 
             in_chans=3, 
             embed_dim=1024, 
-            vocab_size=16384,
+            vocab_size=512,
             depth=24, 
             num_heads=16, 
             decoder_embed_dim=512, 
@@ -151,7 +151,6 @@ class DAE(nn.Module):
 
         # --------------------------------------------------------------------------
         # QVAE encoder specifics
-        self.hard_switch = False
         self.patch_embed = PatchEmbed(img_size, patch_size, in_chans, embed_dim)
         num_patches = self.patch_embed.num_patches
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
@@ -193,12 +192,6 @@ class DAE(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def discretize(self, x):
-        index = x.max(-1, keepdim=True)[1]
-        x_hard = torch.zeros_like(x).scatter_(-1, index, 1.0)
-        ret = x_hard - x.detach() + x  # straight-through estimator of gradient
-        return ret
-
     def patchify(self, imgs):
         """
         imgs: (N, 3, H, W)
@@ -227,6 +220,12 @@ class DAE(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
         return imgs
 
+    def discretize(self, x):
+        index = x.max(-1, keepdim=True)[1]
+        x_hard = torch.zeros_like(x).scatter_(-1, index, 1.0)
+        ret = x_hard - x.detach() + x  # straight-through estimator of gradient
+        return ret
+
     def forward_encoder(self, x, epoch):
         # embed patches
         x = self.patch_embed(x)
@@ -242,8 +241,6 @@ class DAE(nn.Module):
         # project to discrete codebook
         x = self.dict_proj(x)
         x = F.softmax((epoch/2 + 1.) * x, dim=-1)
-        if self.hard_switch:
-            x = self.discretize(x)
         return x
 
     def forward_decoder(self, x):

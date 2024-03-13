@@ -14,7 +14,7 @@ import math
 import argparse
 import json
 from pathlib import Path
-
+import numpy as np
 import torch
 print(torch.__version__)
 
@@ -113,14 +113,13 @@ def main(args):
     print("Starting DAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
-        # turn on hard switch
-        if epoch == 400:
-            model_without_ddp.hard_switch = True
-
         data_loader.sampler.set_epoch(epoch)
         header = 'Epoch: [{}]'.format(epoch)
 
         for it, (samples, _) in enumerate(metric_logger.log_every(data_loader, len(data_loader) // 1, header)):
+
+            if epoch == 0 and it == 0:
+                samples_for_display_and_softmax = samples[:8, ...]  # pick 8 examples for display and softmax estimation at each epoch end
 
             samples = samples.to(device, non_blocking=True)
 
@@ -163,12 +162,19 @@ def main(args):
                 f.write(json.dumps(log_stats) + "\n")
 
         if args.display:
-            samples = samples.to(device, non_blocking=True)
-            with torch.cuda.amp.autocast():
-                _, pred = model(samples[:8, ...], epoch)
-                pred = model_without_ddp.unpatchify(pred)
-            combined = torch.cat((samples[:8, ...], pred), 0)
-            save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
+            with torch.no_grad():
+                samples_for_display_and_softmax = samples_for_display_and_softmax.to(device, non_blocking=True)
+                with torch.cuda.amp.autocast():
+                    _, pred = model(samples_for_display_and_softmax, epoch)
+                    pred = model_without_ddp.unpatchify(pred)
+                    softmaxes = model_without_ddp.forward_encoder(samples_for_display_and_softmax, epoch)
+                    
+                softmaxes = softmaxes.detach().cpu().numpy()
+                combined = torch.cat((samples_for_display_and_softmax, pred), 0)
+                # save original images and their reconstructions
+                save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
+                # save corresponding softmaxes
+                np.save(f"saoftmaxes_{epoch}.npy", softmaxes)
 
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")
