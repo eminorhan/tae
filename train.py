@@ -124,7 +124,7 @@ def main(args):
             samples = samples.to(device, non_blocking=True)
 
             with torch.cuda.amp.autocast():
-                loss, _ = model(samples, epoch)
+                loss, _ = model(samples)
 
             loss_value = loss.item()
 
@@ -165,16 +165,16 @@ def main(args):
             with torch.no_grad():
                 samples_for_display_and_softmax = samples_for_display_and_softmax.to(device, non_blocking=True)
                 with torch.cuda.amp.autocast():
-                    _, pred = model(samples_for_display_and_softmax, epoch)
+                    _, pred = model(samples_for_display_and_softmax)
                     pred = model_without_ddp.unpatchify(pred)
-                    softmaxes = model_without_ddp.forward_encoder(samples_for_display_and_softmax, epoch)
+                    softmaxes = model_without_ddp.forward_encoder(samples_for_display_and_softmax)
                     
                 softmaxes = softmaxes.detach().cpu().numpy()
                 combined = torch.cat((samples_for_display_and_softmax, pred), 0)
                 # save original images and their reconstructions
                 save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
                 # save corresponding softmaxes
-                np.save(f"saoftmaxes_{epoch}.npy", softmaxes)
+                np.save(f"softmaxes_{epoch}.npy", softmaxes)
 
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")

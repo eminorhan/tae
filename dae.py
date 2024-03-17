@@ -137,7 +137,7 @@ class DAE(nn.Module):
             patch_size=16, 
             in_chans=3, 
             embed_dim=1024, 
-            vocab_size=512,
+            vocab_size=8,
             depth=24, 
             num_heads=16, 
             decoder_embed_dim=512, 
@@ -220,13 +220,7 @@ class DAE(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
         return imgs
 
-    def discretize(self, x):
-        index = x.max(-1, keepdim=True)[1]
-        x_hard = torch.zeros_like(x).scatter_(-1, index, 1.0)
-        ret = x_hard - x.detach() + x  # straight-through estimator of gradient
-        return ret
-
-    def forward_encoder(self, x, epoch):
+    def forward_encoder(self, x):
         # embed patches
         x = self.patch_embed(x)
 
@@ -240,7 +234,6 @@ class DAE(nn.Module):
 
         # project to discrete codebook
         x = self.dict_proj(x)
-        x = F.softmax((epoch/2 + 1.) * x, dim=-1)
         return x
 
     def forward_decoder(self, x):
@@ -270,8 +263,8 @@ class DAE(nn.Module):
         loss = loss.mean()  # mean loss per pixel
         return loss
 
-    def forward(self, imgs, epoch):
-        latent = self.forward_encoder(imgs, epoch)
+    def forward(self, imgs):
+        latent = self.forward_encoder(imgs)
         pred = self.forward_decoder(latent)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred)
         return loss, pred
