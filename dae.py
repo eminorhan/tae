@@ -278,9 +278,9 @@ def dae_large_patch14(**kwargs):
     return model
 
 def dae_huge_patch14(**kwargs):
-    model = DAE(patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=1280, decoder_depth=32, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = DAE(patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 def dae_huge_patch14_448(**kwargs):
-    model = DAE(img_size=448, patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=1280, decoder_depth=32, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = DAE(img_size=448, patch_size=14, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model

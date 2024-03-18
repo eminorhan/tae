@@ -14,7 +14,6 @@ import math
 import argparse
 import json
 from pathlib import Path
-import numpy as np
 import torch
 print(torch.__version__)
 
@@ -167,14 +166,11 @@ def main(args):
                 with torch.cuda.amp.autocast():
                     _, pred = model(samples_for_display_and_softmax)
                     pred = model_without_ddp.unpatchify(pred)
-                    softmaxes = model_without_ddp.forward_encoder(samples_for_display_and_softmax)
                     
-                softmaxes = softmaxes.detach().cpu().numpy()
                 combined = torch.cat((samples_for_display_and_softmax, pred), 0)
+
                 # save original images and their reconstructions
                 save_image(combined, f"{args.save_prefix}_reconstructions_epoch_{epoch}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
-                # save corresponding softmaxes
-                np.save(f"softmaxes_{epoch}.npy", softmaxes)
 
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")
