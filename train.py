@@ -87,13 +87,13 @@ def main(args):
     # define the model
     model = dae.__dict__[args.model]()
     model.to(device)
+    model_without_ddp = model
 
     # optionally compile model
     if args.compile:
         model = torch.compile(model)
 
     model = DDP(model, device_ids=[args.gpu])  # TODO: try FSDP
-    model_without_ddp = model.module
     
     print(f"Model: {model_without_ddp}")
     print(f"Number of params (M): {(sum(p.numel() for p in model_without_ddp.parameters() if p.requires_grad) / 1.e6)}")
