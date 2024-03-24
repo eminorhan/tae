@@ -6,8 +6,8 @@
 *.out
 *.npz
 *.png
+*.jpeg
+*.jpg
 
 # Directories
 **/__pycache__
-outputs/
-scripts/
