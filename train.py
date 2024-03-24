@@ -16,11 +16,11 @@ import json
 from pathlib import Path
 import torch
 print(torch.__version__)
-
+from numpy import mean as npmean
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader, DistributedSampler, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision.utils import save_image
 
@@ -49,7 +49,8 @@ def get_args_parser():
     parser.add_argument('--min_lr', type=float, default=0.0001, help='lower lr bound for cyclic schedulers that hit 0')
 
     # Dataset parameters
-    parser.add_argument('--data_path', default='', type=str, help='dataset path')
+    parser.add_argument('--train_data_path', default='', type=str)
+    parser.add_argument('--val_data_path', default='', type=str)
     parser.add_argument('--output_dir', default='./output_dir', help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda', help='device to use for training/testing')
     parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
@@ -71,18 +72,33 @@ def main(args):
     device = torch.device(args.device)
     cudnn.benchmark = True
 
-    # simple augmentation pipeline
-    transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3), 
-        transforms.RandomHorizontalFlip(), 
-        transforms.ToTensor(), 
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-    
-    dataset = ImageFolder(args.data_path, transform=transform)
-    sampler = DistributedSampler(dataset, num_replicas=misc.get_world_size(), rank=misc.get_rank(), shuffle=True)
-    data_loader = DataLoader(dataset, sampler=sampler, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=True)
-    print('Number of iters per epoch:', len(data_loader))
+    # validation transforms
+    val_transform = transforms.Compose([
+        transforms.Resize(args.input_size + 32, interpolation=3),
+        transforms.CenterCrop(args.input_size),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    # training transforms
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    # train and val datasets and loaders
+    val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
+    val_sampler = SequentialSampler(val_dataset)
+    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=16*args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # note we use a larger batch size for eval
+
+    train_dataset = ImageFolder(args.train_data_path, transform=train_transform)
+    train_sampler = DistributedSampler(train_dataset, num_replicas=misc.get_world_size(), rank=misc.get_rank(), shuffle=True)
+    train_loader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+
+    print(f"Data loaded with {len(train_dataset)} train and {len(val_dataset)} val imgs.")
+    print(f"{len(train_loader)} train and {len(val_loader)} val iterations per epoch.")
 
     # define the model
     model = dae.__dict__[args.model]()
@@ -112,11 +128,12 @@ def main(args):
     print("Starting DAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
-        data_loader.sampler.set_epoch(epoch)
+        train_loader.sampler.set_epoch(epoch)
         header = 'Epoch: [{}]'.format(epoch)
 
-        for it, (samples, _) in enumerate(metric_logger.log_every(data_loader, len(data_loader) // 1, header)):
+        for it, (samples, _) in enumerate(metric_logger.log_every(train_loader, len(train_loader) // 1, header)):
 
+            # TODO: push this shit to eval
             if epoch == 0 and it == 0:
                 samples_for_display_and_softmax = samples[:8, ...]  # pick 8 examples for display and softmax estimation at each epoch end
 
@@ -140,7 +157,10 @@ def main(args):
 
             metric_logger.update(loss=loss_value)
 
-        # ============ writing logs + saving checkpoint ============
+        # estimate eval loss at the end of epoch
+        eval_loss = evaluate(val_loader, model, device)
+
+        # ============ writing logs + saving checkpoint at the end of epoch ============ #
         save_dict = {
             'model': model.module.state_dict(),
             'optimizer': optimizer.state_dict(),
@@ -154,7 +174,7 @@ def main(args):
         # gather the stats from all processes
         metric_logger.synchronize_between_processes()
         train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch}
+        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'eval_loss': eval_loss, 'epoch': epoch}
 
         if misc.is_main_process():
             with (Path(args.output_dir) / (args.save_prefix + "_log.txt")).open("a") as f:
@@ -174,6 +194,29 @@ def main(args):
 
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")
+
+@torch.no_grad()
+def evaluate(data_loader, model, device):
+
+    # switch to eval mode
+    model.eval()
+
+    eval_loss = []
+
+    for _, (samples, _) in enumerate(data_loader):
+        samples = samples.to(device, non_blocking=True)
+
+        # compute loss
+        with torch.cuda.amp.autocast():
+            loss, _ = model(samples)
+
+        loss_value = loss.item()
+        eval_loss.append(loss_value)
+
+    eval_loss = npmean(eval_loss)
+    print(f"Eval loss at the end of epoch: {eval_loss}")
+
+    return eval_loss
 
 if __name__ == '__main__':
     args = get_args_parser()
