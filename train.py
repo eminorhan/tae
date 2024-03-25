@@ -162,7 +162,7 @@ def main(args):
 
         # ============ writing logs + saving checkpoint at the end of epoch ============ #
         save_dict = {
-            'model': model.module.state_dict(),
+            'model': model_without_ddp.state_dict(),
             'optimizer': optimizer.state_dict(),
             'args': args,
             'epoch': epoch,

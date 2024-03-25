@@ -273,22 +273,14 @@ def dae_base_patch16_vocab16_px256(**kwargs):
     model = DAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-def dae_base_patch32_vocab256_px256(**kwargs):
+def dae_base_patch32_vocab64_px256(**kwargs):
     model = DAE(patch_size=32, vocab_size=256, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-def dae_base_patch32_vocab512_px256(**kwargs):
-    model = DAE(patch_size=32, vocab_size=512, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-    return model
-
-def dae_base_patch64_vocab512_px256(**kwargs):
+def dae_base_patch64_vocab256_px256(**kwargs):
     model = DAE(patch_size=64, vocab_size=512, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-def dae_base_patch64_vocab768_px256(**kwargs):
-    model = DAE(patch_size=64, vocab_size=768, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-    return model
-
-def dae_large_patch16_vocab16_px256(**kwargs):
-    model = DAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=1024, depth=12, num_heads=16, decoder_embed_dim=1024, decoder_depth=12, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+def dae_base_patch128_vocab1024_px256(**kwargs):
+    model = DAE(patch_size=128, vocab_size=1024, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model

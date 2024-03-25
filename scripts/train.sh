@@ -15,7 +15,7 @@ export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=1
 
 srun python -u ../train.py \
-	--model 'dae_base_patch64_vocab512_px256' \
+	--model 'dae_base_patch16_vocab16_px256' \
 	--resume '' \
 	--accum_iter 1 \
 	--batch_size_per_gpu 256 \
@@ -27,7 +27,6 @@ srun python -u ../train.py \
 	--output_dir /scratch/eo41/dae/outputs \
 	--train_data_path /scratch/work/public/imagenet/train \
 	--val_data_path /scratch/eo41/imagenet/val \
-	--save_prefix dae_base_patch64_vocab512_px256 \
-	--compile
+	--save_prefix dae_base_patch16_vocab16_px256
 
 echo "Done"
