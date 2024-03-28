@@ -24,20 +24,20 @@ from torch.utils.data import DataLoader, DistributedSampler, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision.utils import save_image
 
-import dae
+import tae
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('DAE training', add_help=False)
+    parser = argparse.ArgumentParser('TAE training', add_help=False)
     parser.add_argument('--batch_size_per_gpu', default=256, type=int, help='Batch size per GPU (effective batch size is batch_size_per_gpu * accum_iter * # gpus')
     parser.add_argument('--epochs', default=999999, type=int)
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument("--save_prefix", default="", type=str, help="""prefix for saving checkpoint and log files""")
 
     # Model parameters
-    parser.add_argument('--model', default='dae_huge_patch14', type=str, help='Name of model to train')
+    parser.add_argument('--model', default='', type=str, help='Name of model to train')
     parser.add_argument('--resume', default='', help='resume from a checkpoint')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
@@ -101,7 +101,7 @@ def main(args):
     print(f"{len(train_loader)} train and {len(val_loader)} val iterations per epoch.")
 
     # define the model
-    model = dae.__dict__[args.model]()
+    model = tae.__dict__[args.model]()
     model.to(device)
     model_without_ddp = model
 
@@ -125,7 +125,7 @@ def main(args):
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
 
-    print("Starting DAE training!")
+    print("Starting TAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
         train_loader.sampler.set_epoch(epoch)

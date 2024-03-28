@@ -102,7 +102,7 @@ class Mlp(nn.Module):
         x = self.norm(x)
         x = self.fc2(x)
         return x
-        
+
 class Block(nn.Module):
     def __init__(
             self,
@@ -117,7 +117,7 @@ class Block(nn.Module):
         ):
 
         super().__init__()
-        
+
         self.norm1 = norm_layer(dim)
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_norm=qk_norm, norm_layer=norm_layer)
 
@@ -129,24 +129,24 @@ class Block(nn.Module):
         x = x + self.mlp(self.norm2(x))
         return x
     
-class DAE(nn.Module):
-    """Discrete AE with ViT encoder-decoder"""
+class TAE(nn.Module):
+    """Transformer-based AE with ViT encoder-decoder"""
     def __init__(
-            self, 
-            img_size=224, 
-            patch_size=16, 
-            in_chans=3, 
-            embed_dim=1024, 
+            self,
+            img_size=224,
+            patch_size=16,
+            in_chans=3,
+            embed_dim=1024,
             vocab_size=16,
-            depth=24, 
-            num_heads=16, 
-            decoder_embed_dim=512, 
-            decoder_depth=8, 
-            decoder_num_heads=16, 
-            mlp_ratio=4., 
+            depth=24,
+            num_heads=16,
+            decoder_embed_dim=512,
+            decoder_depth=8,
+            decoder_num_heads=16,
+            mlp_ratio=4.,
             norm_layer=nn.LayerNorm
         ):
-        
+       
         super().__init__()
 
         # --------------------------------------------------------------------------
@@ -269,18 +269,10 @@ class DAE(nn.Module):
         loss = self.forward_loss(imgs, pred)
         return loss, pred
 
-def dae_base_patch16_vocab16_px256(**kwargs):
-    model = DAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+def tae_base_patch16_vocab32_px256(**kwargs):
+    model = TAE(patch_size=16, vocab_size=32, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-def dae_base_patch32_vocab64_px256(**kwargs):
-    model = DAE(patch_size=32, vocab_size=256, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-    return model
-
-def dae_base_patch64_vocab256_px256(**kwargs):
-    model = DAE(patch_size=64, vocab_size=512, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-    return model
-
-def dae_base_patch128_vocab1024_px256(**kwargs):
-    model = DAE(patch_size=128, vocab_size=1024, img_size=256, embed_dim=768, depth=12, num_heads=12, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+def tae_huge_patch128_vocab4096_px256(**kwargs):
+    model = TAE(patch_size=128, vocab_size=4096, img_size=256, embed_dim=1280, depth=32, num_heads=16, decoder_embed_dim=1280, decoder_depth=32, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
