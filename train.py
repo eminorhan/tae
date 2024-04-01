@@ -57,7 +57,7 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=16, type=int)
     parser.add_argument("--jitter_scale", default=[0.2, 1.0], type=float, nargs="+")
     parser.add_argument("--jitter_ratio", default=[3.0/4.0, 4.0/3.0], type=float, nargs="+")
-
+    
     # distributed training parameters
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
