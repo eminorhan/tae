@@ -91,7 +91,7 @@ def main(args):
     # train and val datasets and loaders
     val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
     val_sampler = SequentialSampler(val_dataset)
-    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=16*args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # note we use a larger batch size for eval
+    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # note we use a larger batch size for eval
 
     train_dataset = ImageFolder(args.train_data_path, transform=train_transform)
     train_sampler = DistributedSampler(train_dataset, num_replicas=misc.get_world_size(), rank=misc.get_rank(), shuffle=True)
