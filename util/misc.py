@@ -304,7 +304,7 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler):
         model.save_checkpoint(save_dir=args.output_dir, tag=args.save_prefix + "_checkpoint", client_state=client_state)
 
 
-def load_model(args, model_without_ddp, optimizer, loss_scaler):
+def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None, optim_resume=False):
     if args.resume:
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(args.resume, map_location='cpu', check_hash=True)
@@ -312,7 +312,7 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
             checkpoint = torch.load(args.resume, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'], strict=False)
         print(f"Resume checkpoint {args.resume}")
-        if 'optimizer' in checkpoint and not (hasattr(args, 'no_optim_resume') and args.no_optim_resume):
+        if 'optimizer' in checkpoint and optim_resume:
             optimizer.load_state_dict(checkpoint['optimizer'])
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
