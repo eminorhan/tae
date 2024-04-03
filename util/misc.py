@@ -310,6 +310,10 @@ def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None, optim_
             checkpoint = torch.hub.load_state_dict_from_url(args.resume, map_location='cpu', check_hash=True)
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
+
+        # interpolate position embeddings
+        interpolate_pos_embed(model_without_ddp, checkpoint['model'])        
+
         model_without_ddp.load_state_dict(checkpoint['model'], strict=False)
         print(f"Resume checkpoint {args.resume}")
         if 'optimizer' in checkpoint and optim_resume:
@@ -317,6 +321,33 @@ def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None, optim_
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
+
+
+def interpolate_pos_embed(model, checkpoint_model):
+    """
+    Interpolate position embeddings for higher resolution inputs. 
+    Reference: https://github.com/facebookresearch/deit
+    """
+    if 'pos_embed' in checkpoint_model:
+        pos_embed_checkpoint = checkpoint_model['pos_embed']
+        embedding_size = pos_embed_checkpoint.shape[-1]
+        num_patches = model.patch_embed.num_patches
+        num_extra_tokens = model.pos_embed.shape[-2] - num_patches
+        # height (== width) for the checkpoint position embedding
+        orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
+        # height (== width) for the new position embedding
+        new_size = int(num_patches ** 0.5)
+        # class_token and dist_token are kept unchanged
+        if orig_size != new_size:
+            print(f"Interpolating position embeddings from {orig_size} to {new_size}")
+            extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
+            # only the position tokens are interpolated
+            pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
+            pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
+            pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
+            pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
+            new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
+            checkpoint_model['pos_embed'] = new_pos_embed
 
 
 def all_reduce_mean(x):

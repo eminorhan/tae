@@ -48,10 +48,10 @@ export WORLD_SIZE=1
 
 # 64
 srun python -u ../train.py \
-	--model 'tae_giga_patch64_vocab2048_px256' \
+	--model 'tae_giga_patch64_vocab4096_px256' \
 	--resume '' \
 	--accum_iter 1 \
-	--batch_size_per_gpu 512 \
+	--batch_size_per_gpu 256 \
 	--input_size 256 \
 	--lr 0.0001 \
 	--min_lr 0.0001 \
@@ -60,6 +60,6 @@ srun python -u ../train.py \
 	--output_dir /scratch/eo41/tae/outputs \
 	--train_data_path /scratch/work/public/imagenet/train \
 	--val_data_path /scratch/eo41/imagenet/val \
-	--save_prefix tae_giga_patch64_vocab2048_px256
+	--save_prefix tae_giga_patch64_vocab4096_px256
 
 echo "Done"
