@@ -14,7 +14,7 @@ export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=1
 
-# # 16 - 128 - 256
+# # 16
 # srun python -u ../train.py \
 # 	--model 'tae_base_patch16_vocab128_px256' \
 # 	--resume '' \
@@ -30,9 +30,9 @@ export WORLD_SIZE=1
 # 	--val_data_path /scratch/eo41/imagenet/val \
 # 	--save_prefix tae_base_patch16_vocab128_px256
 
-# # 32 - 1024 - 256
+# # 32
 # srun python -u ../train.py \
-# 	--model 'tae_base_patch32_vocab1024_px256' \
+# 	--model 'tae_base_patch32_vocab512_px256' \
 # 	--resume '' \
 # 	--accum_iter 1 \
 # 	--batch_size_per_gpu 256 \
@@ -44,11 +44,11 @@ export WORLD_SIZE=1
 # 	--output_dir /scratch/eo41/tae/outputs \
 # 	--train_data_path /scratch/work/public/imagenet/train \
 # 	--val_data_path /scratch/eo41/imagenet/val \
-# 	--save_prefix tae_base_patch32_vocab1024_px256
+# 	--save_prefix tae_base_patch32_vocab512_px256
 
-# 64 - 1024 - 256
+# 64
 srun python -u ../train.py \
-	--model 'tae_base_patch64_vocab1024_px256' \
+	--model 'tae_giga_patch64_vocab2048_px256' \
 	--resume '' \
 	--accum_iter 1 \
 	--batch_size_per_gpu 512 \
@@ -60,6 +60,6 @@ srun python -u ../train.py \
 	--output_dir /scratch/eo41/tae/outputs \
 	--train_data_path /scratch/work/public/imagenet/train \
 	--val_data_path /scratch/eo41/imagenet/val \
-	--save_prefix tae_base_patch64_vocab1024_px256
+	--save_prefix tae_giga_patch64_vocab2048_px256
 
 echo "Done"
