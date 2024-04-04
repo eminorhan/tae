@@ -125,6 +125,8 @@ def main(args):
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
 
+    best_eval_loss = 100.0
+
     print("Starting TAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
@@ -160,26 +162,31 @@ def main(args):
         # estimate eval loss at the end of epoch
         eval_loss = evaluate(val_loader, model, device)
 
-        # ============ writing logs + saving checkpoint at the end of epoch ============ #
-        save_dict = {
-            'model': model_without_ddp.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'args': args,
-            'epoch': epoch,
-            'scaler': loss_scaler.state_dict(),
-        }
+        # save checkpoint if eval_loss decreases at the end of epoch
+        if eval_loss < best_eval_loss:
+            print("Best eval loss improved! Saving checkpoint.")
+            save_dict = {
+                'model': model_without_ddp.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'args': args,
+                'epoch': epoch,
+                'scaler': loss_scaler.state_dict(),
+            }
 
-        misc.save_on_master(save_dict, os.path.join(args.output_dir, args.save_prefix + '_checkpoint.pth'))
+            misc.save_on_master(save_dict, os.path.join(args.output_dir, args.save_prefix + '_checkpoint.pth'))
+            best_eval_loss = eval_loss
 
         # gather the stats from all processes
         metric_logger.synchronize_between_processes()
         train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'eval_loss': eval_loss, 'epoch': epoch}
 
+        # write log
         if misc.is_main_process():
             with (Path(args.output_dir) / (args.save_prefix + "_log.txt")).open("a") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
+        # optionally display some reconstructions
         if args.display:
             with torch.no_grad():
                 samples_for_display_and_softmax = samples_for_display_and_softmax.to(device, non_blocking=True)
