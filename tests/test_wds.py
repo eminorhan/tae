@@ -19,8 +19,10 @@ print(torch.__version__)
 from numpy import mean as npmean
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
+import webdataset as wds
+
 from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, DistributedSampler, SequentialSampler
+from torch.utils.data import DataLoader, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision.utils import save_image
 
@@ -57,7 +59,6 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=16, type=int)
     parser.add_argument("--jitter_scale", default=[0.2, 1.0], type=float, nargs="+")
     parser.add_argument("--jitter_ratio", default=[3.0/4.0, 4.0/3.0], type=float, nargs="+")
-    parser.add_argument('--use_wds', action='store_true', help='whether to use webdataset to load data (default: false)')
 
     # distributed training parameters
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -90,15 +91,8 @@ def main(args):
     ])
 
     # train and val datasets and loaders
-    if args.use_wds:
-        import webdataset as wds
-        train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
-        train_loader = wds.WebLoader(train_dataset, shuffle=False, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
-
-    else:        
-        train_dataset = ImageFolder(args.train_data_path, transform=train_transform)
-        train_sampler = DistributedSampler(train_dataset, num_replicas=misc.get_world_size(), rank=misc.get_rank(), shuffle=True)
-        train_loader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
+    train_loader = wds.WebLoader(train_dataset, shuffle=False, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
     val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
     val_sampler = SequentialSampler(val_dataset)
@@ -137,7 +131,6 @@ def main(args):
     print("Starting TAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
-        train_loader.sampler.set_epoch(epoch)
         header = 'Epoch: [{}]'.format(epoch)
 
         for it, (samples, _) in enumerate(metric_logger.log_every(train_loader, len(train_loader) // 1, header)):
