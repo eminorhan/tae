@@ -14,13 +14,14 @@ import math
 import argparse
 import json
 from pathlib import Path
+import webdataset as wds
 import torch
 print(torch.__version__)
 from numpy import mean as npmean
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, DistributedSampler, SequentialSampler
+from torch.utils.data import DataLoader, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision.utils import save_image
 
@@ -30,7 +31,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('TAE training', add_help=False)
+    parser = argparse.ArgumentParser('TAE training with webdataset', add_help=False)
     parser.add_argument('--batch_size_per_gpu', default=256, type=int, help='Batch size per GPU (effective batch size is batch_size_per_gpu * accum_iter * # gpus')
     parser.add_argument('--epochs', default=999999, type=int)
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
@@ -89,9 +90,8 @@ def main(args):
     ])
 
     # train and val datasets and loaders
-    train_dataset = ImageFolder(args.train_data_path, transform=train_transform)
-    train_sampler = DistributedSampler(train_dataset, num_replicas=misc.get_world_size(), rank=misc.get_rank(), shuffle=True)
-    train_loader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
+    train_loader = wds.WebLoader(train_dataset, shuffle=False, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
     val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
     val_sampler = SequentialSampler(val_dataset)
@@ -130,10 +130,7 @@ def main(args):
     print("Starting TAE training!")
     for epoch in range(args.start_epoch, args.epochs):
 
-        train_loader.sampler.set_epoch(epoch)
-        header = 'Epoch: [{}]'.format(epoch)
-
-        for it, (samples, _) in enumerate(metric_logger.log_every(train_loader, len(train_loader) // 1, header)):
+        for it, (samples, _) in enumerate(train_loader):
 
             # TODO: push this shit to eval
             if epoch == 0 and it == 0:

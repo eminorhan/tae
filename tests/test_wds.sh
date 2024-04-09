@@ -16,7 +16,7 @@ export WORLD_SIZE=1
 
 # 64
 srun python -u test_wds.py \
-	--batch_size_per_gpu 1024 \
+	--batch_size_per_gpu 2048 \
 	--input_size 256 \
 	--num_workers 16 \
 	--train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
