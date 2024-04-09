@@ -25,6 +25,7 @@ export WORLD_SIZE=1
 # 	--min_lr 0.0001 \
 # 	--weight_decay 0.0 \
 # 	--num_workers 16 \
+#	--save_freq 10000 \
 # 	--output_dir /scratch/eo41/tae/outputs \
 # 	--train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
 # 	--val_data_path /scratch/eo41/imagenet/val \
@@ -41,6 +42,7 @@ export WORLD_SIZE=1
 # 	--min_lr 0.0001 \
 # 	--weight_decay 0.0 \
 # 	--num_workers 16 \
+#	--save_freq 10000 \
 # 	--output_dir /scratch/eo41/tae/outputs \
 # 	--train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
 # 	--val_data_path /scratch/eo41/imagenet/val \
@@ -57,6 +59,7 @@ srun python -u ../train_wds.py \
 	--min_lr 0.0001 \
 	--weight_decay 0.0 \
 	--num_workers 16 \
+	--save_freq 10000 \
 	--output_dir /scratch/eo41/tae/outputs \
 	--train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
 	--val_data_path /scratch/eo41/imagenet/val \
