@@ -19,6 +19,7 @@ srun python -u test_wds.py \
 	--batch_size_per_gpu 2048 \
 	--input_size 256 \
 	--num_workers 16 \
-	--train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
+	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
+	# --train_data_path "/scratch/eo41/data/imagenet10k/imagenet10k_1.0_1_{000000..000010}.tar" \
 
 echo "Done"
