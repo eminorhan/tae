@@ -90,7 +90,7 @@ def main(args):
 
     # train and val datasets and loaders
     train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
-    train_loader = wds.WebLoader(train_dataset, shuffle=True, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
+    train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
     val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
     val_sampler = SequentialSampler(val_dataset)
@@ -128,7 +128,7 @@ def main(args):
     print("Starting TAE training!")
     # infinite stream for iterable webdataset
     for it, (samples, _) in enumerate(train_loader):
-        
+
         # optionally pick 8 examples for display and softmax estimation at regular intervals
         if args.display and it % args.save_freq == 0:
             samples_for_display_and_softmax = samples[:8, ...]

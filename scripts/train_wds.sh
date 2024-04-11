@@ -7,7 +7,7 @@
 #SBATCH --mem=240GB
 #SBATCH --time=12:00:00
 #SBATCH --job-name=train_tae_wds
-#SBATCH --output=train_tae_ws_%A_%a.out
+#SBATCH --output=train_tae_wds_%A_%a.out
 #SBATCH --array=0
 
 export MASTER_ADDR=$(hostname -s)
