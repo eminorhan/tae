@@ -168,7 +168,7 @@ def main(args):
                     'scaler': loss_scaler.state_dict(),
                 }
 
-                misc.save_on_master(save_dict, os.path.join(args.output_dir, args.save_prefix + '_checkpoint.pth'))
+                misc.save_on_master(save_dict, os.path.join(args.output_dir, f"{args.save_prefix}_checkpoint.pth"))
                 best_eval_loss = eval_loss
 
             # gather the stats from all processes
@@ -192,7 +192,7 @@ def main(args):
                     combined = torch.cat((samples_for_display_and_softmax, pred), 0)
 
                     # save original images and their reconstructions
-                    save_image(combined, f"{args.save_prefix}_reconstructions_iter_{it}.jpg", nrow=8, padding=1, normalize=True, scale_each=True)
+                    save_image(combined, os.path.join(args.output_dir, f"{args.save_prefix}_reconstructions_iter_{it}.jpg"), nrow=8, padding=1, normalize=True, scale_each=True)
 
             # start a fresh logger to wipe off old stats
             metric_logger = misc.MetricLogger(delimiter="  ")
