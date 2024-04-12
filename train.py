@@ -202,6 +202,9 @@ def main(args):
         # start a fresh logger to wipe off old stats
         metric_logger = misc.MetricLogger(delimiter="  ")
 
+        # switch back to train mode
+        model.train(True)
+
 @torch.no_grad()
 def evaluate(data_loader, model, device):
 

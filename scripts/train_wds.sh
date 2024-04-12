@@ -30,8 +30,7 @@ srun python -u ../train_wds.py \
 	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
 	--val_data_path /scratch/eo41/imagenet/val \
 	--save_prefix tae_base_patch16_vocab16_px256 \
-	--display \
-	--compile
+	--display
 
 # # 32
 # srun python -u ../train_wds.py \
