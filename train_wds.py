@@ -47,7 +47,6 @@ def get_args_parser():
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate (absolute lr)')
-    parser.add_argument('--min_lr', type=float, default=0.0001, help='lower lr bound for cyclic schedulers that hit 0')
 
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
@@ -155,7 +154,7 @@ def main(args):
 
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
-            eval_loss = evaluate(val_loader, model, device)
+            eval_loss = evaluate(val_loader, model_without_ddp, device)
 
             # save checkpoint only if eval_loss decreases
             if eval_loss < best_eval_loss:
@@ -186,7 +185,7 @@ def main(args):
                 with torch.no_grad():
                     samples_for_display_and_softmax = samples_for_display_and_softmax.to(device, non_blocking=True)
                     with torch.cuda.amp.autocast():
-                        _, pred = model(samples_for_display_and_softmax)
+                        _, pred = model_without_ddp(samples_for_display_and_softmax)
                         pred = model_without_ddp.unpatchify(pred)
                         
                     combined = torch.cat((samples_for_display_and_softmax, pred), 0)
