@@ -15,7 +15,7 @@ export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=1
 
 MODELS=(
-	tae_base_patch16_vocab16_px256
+	tae_patch32_vocab64_px256
 )
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}

@@ -118,7 +118,7 @@ def main(args):
 
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
     
-    model.train(True)
+    model.train()
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
 
@@ -196,8 +196,8 @@ def main(args):
             # start a fresh logger to wipe off old stats
             metric_logger = misc.MetricLogger(delimiter="  ")
 
-            # switch back to train mode
-            model.train(True)
+            # switch back to train mode, not 100% sure if this is strictly necessary since we're passing the unwrapped model to eval now
+            model.train()
 
 @torch.no_grad()
 def evaluate(data_loader, model, device):
