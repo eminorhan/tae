@@ -1,0 +1,12 @@
+{"train_loss": 0.19524129202393647, "eval_loss": 0.12804147988557815, "iteration": 10000}
+{"train_loss": 0.19768936885301977, "eval_loss": 0.1250869822502136, "iteration": 10000}
+{"train_loss": 0.09589238334298134, "eval_loss": 0.10442156612873077, "iteration": 20000}
+{"train_loss": 0.08297566117122769, "eval_loss": 0.09589131325483322, "iteration": 30000}
+{"train_loss": 0.07694875988736749, "eval_loss": 0.09153054296970367, "iteration": 40000}
+{"train_loss": 0.07352401454932987, "eval_loss": 0.08904315263032914, "iteration": 50000}
+{"train_loss": 0.07188768857866526, "eval_loss": 0.08773915946483613, "iteration": 60000}
+{"train_loss": 0.07077069275341928, "eval_loss": 0.08661779582500458, "iteration": 70000}
+{"train_loss": 0.06986877596750855, "eval_loss": 0.0857616138458252, "iteration": 80000}
+{"train_loss": 0.06909350787587464, "eval_loss": 0.0850642217695713, "iteration": 90000}
+{"train_loss": 0.06845226737707853, "eval_loss": 0.08437663361430169, "iteration": 100000}
+{"train_loss": 0.06806721607074141, "eval_loss": 0.08385801255702972, "iteration": 110000}

@@ -310,13 +310,13 @@ def tae_patch64_vocab4096_px256(**kwargs):
 
 # patch 128
 def tae_patch128_vocab1024_px256(**kwargs):
-    model = TAE(patch_size=128, vocab_size=1024, img_size=256, embed_dim=2560, depth=23, num_heads=32, decoder_embed_dim=2560, decoder_depth=23, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = TAE(patch_size=128, vocab_size=1024, img_size=256, embed_dim=2560, depth=22, num_heads=32, decoder_embed_dim=2560, decoder_depth=22, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 def tae_patch128_vocab4096_px256(**kwargs):
-    model = TAE(patch_size=128, vocab_size=4096, img_size=256, embed_dim=2560, depth=23, num_heads=32, decoder_embed_dim=2560, decoder_depth=23, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = TAE(patch_size=128, vocab_size=4096, img_size=256, embed_dim=2560, depth=22, num_heads=32, decoder_embed_dim=2560, decoder_depth=22, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 def tae_patch128_vocab16384_px256(**kwargs):
-    model = TAE(patch_size=128, vocab_size=16384, img_size=256, embed_dim=2560, depth=23, num_heads=32, decoder_embed_dim=2560, decoder_depth=23, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = TAE(patch_size=128, vocab_size=16384, img_size=256, embed_dim=2560, depth=22, num_heads=32, decoder_embed_dim=2560, decoder_depth=22, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
