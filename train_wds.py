@@ -154,6 +154,7 @@ def main(args):
 
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
+            print(f"Iteration {it}, evaluating ...")
             eval_loss = evaluate(val_loader, model_without_ddp, device)
 
             # save checkpoint only if eval_loss decreases
