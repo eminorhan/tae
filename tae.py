@@ -269,6 +269,75 @@ class TAE(nn.Module):
         loss = self.forward_loss(imgs, pred)
         return loss, pred
 
+
+class VIT(nn.Module):
+    """PatchEmbedless VIT based on TAE"""
+    def __init__(
+            self,
+            num_patches=256,
+            vocab_size=16,
+            decoder_embed_dim=512,
+            decoder_depth=8,
+            decoder_num_heads=16,
+            mlp_ratio=4.,
+            norm_layer=nn.LayerNorm,
+            num_classes=None
+        ):
+       
+        super().__init__()
+
+        # --------------------------------------------------------------------------
+        # QVAE decoder specifics
+        self.decoder_embed = nn.Linear(vocab_size, decoder_embed_dim, bias=True)
+        self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches, decoder_embed_dim))
+        self.decoder_blocks = nn.ModuleList([Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer) for i in range(decoder_depth)])
+        self.decoder_norm = norm_layer(decoder_embed_dim)
+        self.head = nn.Linear(decoder_embed_dim, num_classes) if num_classes != None else nn.Identity()
+        # --------------------------------------------------------------------------
+
+        self.initialize_weights()
+
+    def initialize_weights(self):
+        # initialize pos_embed
+        torch.nn.init.trunc_normal_(self.decoder_pos_embed, std=0.02)
+
+        # initialize nn.Linear and nn.LayerNorm
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            # we use xavier_uniform following official JAX ViT:
+            torch.nn.init.xavier_uniform_(m.weight)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    def forward_features(self, x):
+        # embed tokens
+        x = self.decoder_embed(x)
+
+        # add pos embed
+        x = x + self.decoder_pos_embed
+
+        # apply transformer blocks
+        for blk in self.decoder_blocks:
+            x = blk(x)
+        x = self.decoder_norm(x)
+        return x
+
+    def forward_head(self, x):
+        x = x.mean(dim=1)  # global pooling 
+        x = self.head(x)
+        return x
+
+    def forward(self, x):
+        x = self.forward_features(x)
+        x = self.forward_head(x)
+        return x
+
+
 # patch 16
 def tae_patch16_vocab16_px256(**kwargs):
     model = TAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=1024, depth=15, num_heads=16, decoder_embed_dim=1024, decoder_depth=15, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
