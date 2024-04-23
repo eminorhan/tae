@@ -14,11 +14,10 @@ export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=1
 
-# 32 - 1024 - 256
-srun python -u ../evaluate.py \
+srun python -u test_dtype.py \
 	--model 'tae_patch16_vocab16_px256' \
 	--resume ../outputs/tae_patch16_vocab16_px256/tae_patch16_vocab16_px256_checkpoint.pth \
-	--batch_size_per_gpu 128 \
+	--batch_size_per_gpu 256 \
 	--input_size 256 \
 	--num_workers 16 \
 	--val_data_path /scratch/eo41/imagenet/val \
