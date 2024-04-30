@@ -41,8 +41,8 @@ def main(args):
     ])
 
     # train dataset and loader
-    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
-    train_loader = wds.WebLoader(train_dataset, shuffle=False, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
+    train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
     for it, (samples, targets) in enumerate(train_loader):
         print('Iter, samples shape, targets:', it+1, samples.shape, targets)
