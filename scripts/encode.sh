@@ -8,7 +8,7 @@
 #SBATCH --time=00:15:00
 #SBATCH --job-name=encode_tae
 #SBATCH --output=encode_tae_%A_%a.out
-#SBATCH --array=0
+#SBATCH --array=1
 
 export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
@@ -36,6 +36,8 @@ srun python -u ../encode.py \
 	--resume /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
 	--batch_size_per_gpu 5000 \
 	--input_size 256 \
+	--maxcount 32 \
+	--data_len 13151276 \
 	--num_workers 16 \
 	--data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar"
 

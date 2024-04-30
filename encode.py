@@ -3,6 +3,7 @@ import sys
 import argparse
 import torch
 print(torch.__version__)
+
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import webdataset as wds
@@ -74,10 +75,13 @@ def main(args):
                 with torch.cuda.amp.autocast():
                     latents = model_without_ddp.forward_encoder(samples)
 
-                sample = {"__key__": it, "input.pyd": latents.cpu(), "output.pyd": targets}
+                sample = {"__key__": str(it), "input.pyd": latents.cpu(), "output.pyd": targets.to(torch.int16)}
 
                 # Write the sample to the sharded tar archives.
                 sink.write(sample)
+
+                if it % 10 == 0:
+                    print("iter", it)
 
 
 if __name__ == '__main__':
