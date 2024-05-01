@@ -11,6 +11,8 @@ import webdataset as wds
 sys.path.insert(0, os.path.abspath('..'))
 import tae
 from  util import misc as misc
+from pathlib import Path
+
 
 
 def get_args_parser():
@@ -32,6 +34,10 @@ def get_args_parser():
     # distributed training parameters
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
+    # Misc
+    parser.add_argument('--output_dir', default='', help='path where to save processed dataset')
+    parser.add_argument('--save_prefix', default="", type=str, help='prefix for saving dataset')
+
     return parser
 
 
@@ -51,9 +57,11 @@ def main(args):
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
 
+    num_iters = args.data_len // args.batch_size_per_gpu
+
     # dataset and loader
     dataset = wds.WebDataset(args.data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(transform, lambda x: x)
-    loader = wds.WebLoader(dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(args.data_len // args.batch_size_per_gpu)
+    loader = wds.WebLoader(dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(num_iters)
 
     # define the model
     model_without_ddp = tae.__dict__[args.model]()
@@ -62,7 +70,8 @@ def main(args):
     # load pretrained autoencoder
     misc.load_model(args=args, model_without_ddp=model_without_ddp)
 
-    pattern = f"demo_%06d.tar"
+    # data will be saved here
+    pattern = os.path.join(args.output_dir, f"{args.save_prefix}_{args.model}_%06d.tar")
     with wds.ShardWriter(pattern, maxcount=int(args.maxcount)) as sink:    
         with torch.no_grad():
             # switch to eval mode
@@ -75,16 +84,22 @@ def main(args):
                 with torch.cuda.amp.autocast():
                     latents = model_without_ddp.forward_encoder(samples)
 
-                sample = {"__key__": str(it), "input.pyd": latents.cpu(), "output.pyd": targets.to(torch.int16)}
+                latents = latents.cpu()
+                targets = targets.to(torch.int16)
+
+                sample = {"__key__": str(it), "input.pyd": latents, "output.pyd": targets}
 
                 # Write the sample to the sharded tar archives.
                 sink.write(sample)
 
-                if it % 10 == 0:
-                    print("iter", it)
+                if it % 100 == 0:
+                    print(f"Iteration {it} of {num_iters}")
+                    print(f"Latents shape-dytpe: {latents.shape}-{latents.dtype}")
+                    print(f"Targets shape-dytpe: {targets.shape}-{targets.dtype}")
 
 
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)
