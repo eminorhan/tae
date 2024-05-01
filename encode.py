@@ -57,7 +57,7 @@ def main(args):
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
 
-    num_iters = args.data_len // args.batch_size_per_gpu
+    num_iters = args.data_len // args.batch_size_per_gpu + 1
 
     # dataset and loader
     dataset = wds.WebDataset(args.data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(transform, lambda x: x)

@@ -41,7 +41,7 @@ srun python -u ../encode.py \
 	--num_workers 16 \
 	--output_dir /scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL} \
 	--save_prefix "imagenet_1k" \
-	--data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-wds/imagenet1k-train-{0000..2047}.tar"
+	--data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-wds/imagenet1k-train-{0000..1023}.tar"
 	# --data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar"
 
 echo "Done"
