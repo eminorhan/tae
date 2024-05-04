@@ -1,13 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# DeiT: https://github.com/facebookresearch/deit
-# BEiT: https://github.com/microsoft/unilm/tree/master/beit
-# --------------------------------------------------------
 import os
 import sys
 import math
@@ -17,11 +7,8 @@ from pathlib import Path
 import webdataset as wds
 import torch
 print(torch.__version__)
-from numpy import mean as npmean
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 import tae
@@ -41,7 +28,6 @@ def get_args_parser():
     parser.add_argument('--resume', default='', help='resume from a checkpoint')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
-    parser.add_argument('--display', action='store_true', help='whether to display reconstruction at regular intervals.')
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
@@ -50,13 +36,16 @@ def get_args_parser():
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
     parser.add_argument('--val_data_path', default='', type=str)
+    parser.add_argument('--val_data_len', default=50000, type=int, help='Total size of val dataset')
+
+    # Misc
     parser.add_argument('--output_dir', default='./output_dir', help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda', help='device to use for training/testing')
     parser.add_argument('--num_workers', default=16, type=int)
     parser.add_argument('--jitter_scale', default=[0.2, 1.0], type=float, nargs="+")
     parser.add_argument('--jitter_ratio', default=[3.0/4.0, 4.0/3.0], type=float, nargs="+")
 
-    # distributed training parameters
+    # Distributed training parameters
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     return parser
@@ -91,7 +80,7 @@ def main(args):
     train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
     val_dataset = wds.WebDataset(args.val_data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(val_transform, lambda x: x)
-    val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(50000 // args.batch_size_per_gpu + 1)
+    val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(args.val_data_len // args.batch_size_per_gpu + 1)
     print(f"Train and val data loaded.")
 
     # define the model

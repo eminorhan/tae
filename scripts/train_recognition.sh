@@ -2,12 +2,12 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=240GB
-#SBATCH --time=01:00:00
-#SBATCH --job-name=encode_tae
-#SBATCH --output=encode_tae_%A_%a.out
+#SBATCH --time=48:00:00
+#SBATCH --job-name=train_recognition
+#SBATCH --output=train_recognition_%A_%a.out
 #SBATCH --array=1,4,7,10
 
 export MASTER_ADDR=$(hostname -s)
@@ -31,18 +31,22 @@ MODELS=(
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
-srun python -u ../encode.py \
+# 21k
+srun python -u ../train_recognition.py \
 	--model ${MODEL} \
-	--resume /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
+	--resume '' \
+	--accum_iter 1 \
 	--batch_size_per_gpu 256 \
 	--input_size 256 \
-	--maxcount 4 \
-	--data_len 1281167 \
+	--lr 0.0001 \
+	--weight_decay 0.0 \
 	--num_workers 16 \
-	--output_dir /scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL} \
-	--save_prefix "imagenet_1k_val" \
-	--data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-wds/imagenet1k-validation-{00..63}.tar"
-	# --data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-wds/imagenet1k-train-{0000..1023}.tar"
-	# --data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar"
+	--save_freq 10000 \
+	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \
+	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL}/imagenet_1k_${MODEL}_{0000..1023}.tar" \
+	--val_data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL}/imagenet_1k_val_${MODEL}_{00..63}.tar" \
+	--val_data_len 50000 \
+	--save_prefix imagenet_1k_${MODEL} \
+	--compile
 
 echo "Done"
