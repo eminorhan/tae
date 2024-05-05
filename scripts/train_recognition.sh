@@ -2,13 +2,13 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:h100:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=240GB
-#SBATCH --time=48:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name=train_recognition
 #SBATCH --output=train_recognition_%A_%a.out
-#SBATCH --array=1,4,7,10
+#SBATCH --array=1
 
 export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
@@ -33,11 +33,10 @@ MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
 # 21k
 srun python -u ../train_recognition.py \
-	--model ${MODEL} \
+	--model vit_recognition_numpatches256_vocab64_small \
 	--resume '' \
 	--accum_iter 1 \
-	--batch_size_per_gpu 256 \
-	--input_size 256 \
+	--batch_size_per_gpu 2 \
 	--lr 0.0001 \
 	--weight_decay 0.0 \
 	--num_workers 16 \

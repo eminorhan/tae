@@ -26,7 +26,6 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
     parser.add_argument('--resume', default='', help='resume from a checkpoint')
-    parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
 
     # Optimizer parameters
@@ -59,27 +58,11 @@ def main(args):
     device = torch.device(args.device)
     cudnn.benchmark = True
 
-    # validation transforms
-    val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=3),
-        transforms.CenterCrop(args.input_size),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
-
-    # training transforms
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
-
     # train and val datasets and loaders
-    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).to_tuple("input.pyd", "output.pyd")
     train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
-    val_dataset = wds.WebDataset(args.val_data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(val_transform, lambda x: x)
+    val_dataset = wds.WebDataset(args.val_data_path, resampled=False).to_tuple("input.pyd", "output.pyd")
     val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(args.val_data_len // args.batch_size_per_gpu + 1)
     print(f"Train and val data loaded.")
 
