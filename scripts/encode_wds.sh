@@ -37,7 +37,7 @@ srun python -u ../encode.py \
 	--batch_size_per_gpu 256 \
 	--input_size 256 \
 	--maxcount 4 \
-	--data_len 1281167 \
+	--data_len 50000 \
 	--num_workers 16 \
 	--output_dir /scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL} \
 	--save_prefix "imagenet_1k_val" \

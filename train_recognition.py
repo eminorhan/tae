@@ -9,6 +9,8 @@ import torch
 print(torch.__version__)
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader, SequentialSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 import tae
@@ -25,7 +27,11 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
-    parser.add_argument('--resume', default='', help='resume from a checkpoint')
+    parser.add_argument('--encoder', default='', type=str, help='Name of encoder')
+    parser.add_argument('--model_ckpt', default='', type=str, help='Name of model to train')
+    parser.add_argument('--encoder_ckpt', default='', type=str, help='Name of encoder')
+    parser.add_argument('--num_classes', default=None, type=int, help='number of classes')
+    parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
 
     # Optimizer parameters
@@ -35,7 +41,6 @@ def get_args_parser():
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
     parser.add_argument('--val_data_path', default='', type=str)
-    parser.add_argument('--val_data_len', default=50000, type=int, help='Total size of val dataset')
 
     # Misc
     parser.add_argument('--output_dir', default='./output_dir', help='path where to save, empty for no saving')
@@ -58,18 +63,39 @@ def main(args):
     device = torch.device(args.device)
     cudnn.benchmark = True
 
+    # validation transforms
+    val_transform = transforms.Compose([
+        transforms.Resize(args.input_size + 32, interpolation=3),
+        transforms.CenterCrop(args.input_size),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    # training transforms
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
     # train and val datasets and loaders
-    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).to_tuple("input.pyd", "output.pyd")
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
     train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
 
-    val_dataset = wds.WebDataset(args.val_data_path, resampled=False).to_tuple("input.pyd", "output.pyd")
-    val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers).with_epoch(args.val_data_len // args.batch_size_per_gpu + 1)
-    print(f"Train and val data loaded.")
+    val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
+    val_sampler = SequentialSampler(val_dataset)
+    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # note we use a larger batch size for eval
 
     # define the model
-    model = tae.__dict__[args.model]()
+    model = tae.__dict__[args.model](num_classes=args.num_classes)
     model.to(device)
     model_without_ddp = model
+
+    # define the encoder
+    encoder = tae.__dict__[args.encoder]()
+    misc.load_model(args.encoder_ckpt, encoder)
+    encoder.eval()
 
     # optionally compile model
     if args.compile:
@@ -86,7 +112,7 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     loss_scaler = NativeScaler()
 
-    misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
+    misc.load_model(args.model_ckpt, model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
     
     model.train()
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -97,6 +123,9 @@ def main(args):
     print("Starting TAE training!")
     # infinite stream for iterable webdataset
     for it, (samples, targets) in enumerate(train_loader):
+        with torch.no_grad():
+            samples = encoder.forward_encoder(samples)
+            samples = samples.to(torch.float16)
 
         samples = samples.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
@@ -104,7 +133,7 @@ def main(args):
         with torch.cuda.amp.autocast():
             outputs = model(samples)
             loss = criterion(outputs, targets)
-
+        print(loss)
         loss_value = loss.item()
 
         if not math.isfinite(loss_value):
