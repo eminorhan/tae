@@ -4,14 +4,9 @@ import math
 import argparse
 import json
 from pathlib import Path
-import webdataset as wds
 import torch
 print(torch.__version__)
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, SequentialSampler
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 import tae
 import util.misc as misc
@@ -20,16 +15,14 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Training on a downstream recognition task', add_help=False)
-    parser.add_argument('--batch_size_per_gpu', default=256, type=int, help='Batch size per GPU (effective batch size is batch_size_per_gpu * accum_iter * # gpus')
+    parser.add_argument('--batch_size', default=256, type=int, help='Total batch size')
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--save_prefix', default="", type=str, help="""prefix for saving checkpoint and log files""")
     parser.add_argument('--save_freq', default=10000, type=int, help='Save checkpoint every this many iterations.')
 
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
-    parser.add_argument('--encoder', default='', type=str, help='Name of encoder')
     parser.add_argument('--model_ckpt', default='', type=str, help='Name of model to train')
-    parser.add_argument('--encoder_ckpt', default='', type=str, help='Name of encoder')
     parser.add_argument('--num_classes', default=None, type=int, help='number of classes')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
@@ -45,63 +38,31 @@ def get_args_parser():
     # Misc
     parser.add_argument('--output_dir', default='./output_dir', help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda', help='device to use for training/testing')
-    parser.add_argument('--num_workers', default=16, type=int)
-    parser.add_argument('--jitter_scale', default=[0.2, 1.0], type=float, nargs="+")
-    parser.add_argument('--jitter_ratio', default=[3.0/4.0, 4.0/3.0], type=float, nargs="+")
-
-    # Distributed training parameters
-    parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
 
     return parser
 
 
 def main(args):
-    misc.init_distributed_mode(args)
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
-
-    device = torch.device(args.device)
     cudnn.benchmark = True
 
-    # validation transforms
-    val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=3),
-        transforms.CenterCrop(args.input_size),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
+    device = torch.device(args.device)
 
-    # training transforms
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
+    # train and val datasets
+    train_data = torch.load(args.train_data_path, map_location='cpu')
+    val_data = torch.load(args.val_data_path, map_location='cpu')
 
-    # train and val datasets and loaders
-    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
-    train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers)
-
-    val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
-    val_sampler = SequentialSampler(val_dataset)
-    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size_per_gpu, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # note we use a larger batch size for eval
+    n_train = train_data['targets'].shape[0]
 
     # define the model
     model = tae.__dict__[args.model](num_classes=args.num_classes)
     model.to(device)
     model_without_ddp = model
 
-    # define the encoder
-    encoder = tae.__dict__[args.encoder]()
-    misc.load_model(args.encoder_ckpt, encoder)
-    encoder.eval()
-
     # optionally compile model
     if args.compile:
         model = torch.compile(model)
-
-    model = DDP(model, device_ids=[args.gpu])  # TODO: try FSDP
     
     print(f"Model: {model_without_ddp}")
     print(f"Number of params (M): {(sum(p.numel() for p in model_without_ddp.parameters() if p.requires_grad) / 1.e6)}")
@@ -119,22 +80,28 @@ def main(args):
     optimizer.zero_grad()
 
     best_eval_acc1 = 0.0
+    it = 0
 
     print("Starting TAE training!")
-    # infinite stream for iterable webdataset
-    for it, (samples, targets) in enumerate(train_loader):
-        with torch.no_grad():
-            samples = encoder.forward_encoder(samples)
-            samples = samples.to(torch.float16)
+    # infinite stream of training data
+    while True:
+        # randomly sample indices
+        indx = torch.randint(0, n_train, size=(args.batch_size, ))
 
+        # take the corresponding slices of data
+        samples = train_data['latents'][indx]
+        targets = train_data['targets'][indx]
+
+        # move to gpu
         samples = samples.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
 
         with torch.cuda.amp.autocast():
             outputs = model(samples)
             loss = criterion(outputs, targets)
-        print(loss)
+        
         loss_value = loss.item()
+        print(outputs.shape, targets.shape, loss_value)
 
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
@@ -152,7 +119,7 @@ def main(args):
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
             print(f"Iteration {it}, evaluating ...")
-            test_stats = evaluate(val_loader, model_without_ddp, device)
+            test_stats = evaluate(val_data, args.batch_size, model_without_ddp, device)
             
             # save checkpoint only if eval_loss decreases
             if test_stats['acc1'] > best_eval_acc1:
@@ -184,16 +151,24 @@ def main(args):
             # switch back to train mode, not 100% sure if this is strictly necessary since we're passing the unwrapped model to eval now
             model.train()
 
+        it += 1    
+
 @torch.no_grad()
-def evaluate(data_loader, model, device):
+def evaluate(val_data, batch_size, model, device):
 
     criterion = torch.nn.CrossEntropyLoss()
     metric_logger = misc.MetricLogger(delimiter="  ")
 
+    n_val = val_data['targets'].shape[0]    
+
     # switch to eval mode
     model.eval()
 
-    for _, (samples, targets) in enumerate(data_loader):
+    for i in range(0, n_val, batch_size):
+
+        samples = val_data['latents'][i:(i+batch_size)]
+        targets = val_data['targets'][i:(i+batch_size)]
+
         samples = samples.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
 
@@ -204,10 +179,10 @@ def evaluate(data_loader, model, device):
 
         acc1, acc5 = misc.accuracy(outputs, targets, topk=(1, 5))
 
-        batch_size = samples.shape[0]
+        bsize = samples.shape[0]
         metric_logger.update(loss=loss.item())
-        metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
-        metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
+        metric_logger.meters['acc1'].update(acc1.item(), n=bsize)
+        metric_logger.meters['acc5'].update(acc5.item(), n=bsize)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()

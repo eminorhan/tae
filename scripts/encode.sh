@@ -8,7 +8,7 @@
 #SBATCH --time=01:00:00
 #SBATCH --job-name=encode_tae
 #SBATCH --output=encode_tae_%A_%a.out
-#SBATCH --array=1,4,7,10
+#SBATCH --array=1
 
 export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
@@ -33,10 +33,9 @@ MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
 srun python -u ../encode.py \
 	--model ${MODEL} \
-	--resume /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
-	--batch_size_per_gpu 256 \
+	--model_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
+	--batch_size_per_gpu 1024 \
 	--input_size 256 \
-	--maxcount 4 \
 	--data_len 50000 \
 	--num_workers 16 \
 	--output_dir /scratch/projects/lakelab/data_frames/imagenet-1k-processed/${MODEL} \

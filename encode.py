@@ -14,7 +14,6 @@ from  util import misc as misc
 from pathlib import Path
 
 
-
 def get_args_parser():
     parser = argparse.ArgumentParser('Encode a dataset with a TAE', add_help=False)
     parser.add_argument('--batch_size_per_gpu', default=256, type=int, help='Batch size per GPU (effective batch size is batch_size_per_gpu * accum_iter * # gpus')
@@ -23,7 +22,7 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
-    parser.add_argument('--resume', default='', help='resume from a checkpoint')
+    parser.add_argument('--model_ckpt', default='', help='Load a pretrained checkpoint')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
 
     # Dataset parameters
@@ -49,7 +48,7 @@ def main(args):
     device = torch.device(args.device)
     cudnn.benchmark = True
 
-    # validation transforms
+    # data transforms
     transform = transforms.Compose([
         transforms.Resize(args.input_size + 32, interpolation=3),
         transforms.CenterCrop(args.input_size),
@@ -68,34 +67,36 @@ def main(args):
     model_without_ddp.to(device)
 
     # load pretrained autoencoder
-    misc.load_model(args=args, model_without_ddp=model_without_ddp)
+    misc.load_model(args.model_ckpt, model_without_ddp)
 
-    # data will be saved here
-    pattern = os.path.join(args.output_dir, f"{args.save_prefix}_{args.model}_%06d.tar")
-    with wds.ShardWriter(pattern, maxcount=int(args.maxcount)) as sink:    
-        with torch.no_grad():
-            # switch to eval mode
-            model_without_ddp.eval()
+    latents_list = []
+    targets_list = []
 
-            for it, (samples, targets) in enumerate(loader):
-                samples = samples.to(device, non_blocking=True)
+    with torch.no_grad():
+        # switch to eval mode
+        model_without_ddp.eval()
 
-                # pass thru encoder
-                with torch.cuda.amp.autocast():
-                    latents = model_without_ddp.forward_encoder(samples)
+        for it, (samples, targets) in enumerate(loader):
+            samples = samples.to(device, non_blocking=True)
 
-                latents = latents.cpu()
-                targets = targets.to(torch.int16)
+            # pass thru encoder
+            with torch.cuda.amp.autocast():
+                latents = model_without_ddp.forward_encoder(samples)
 
-                sample = {"__key__": str(it), "input.pyd": latents, "output.pyd": targets}
+            latents_list.append(latents.cpu())
+            targets_list.append(targets)
 
-                # Write the sample to the sharded tar archives.
-                sink.write(sample)
+            if it % 100 == 0:
+                print(f"Iteration {it} of {num_iters}")
 
-                if it % 100 == 0:
-                    print(f"Iteration {it} of {num_iters}")
-                    print(f"Latents shape-dytpe: {latents.shape}-{latents.dtype}")
-                    print(f"Targets shape-dytpe: {targets.shape}-{targets.dtype}")
+        latents_list = torch.cat(latents_list, 0)
+        targets_list = torch.cat(targets_list, 0)
+        print(f"Final latents shape-dytpe: {latents_list.shape}-{latents_list.dtype}")
+        print(f"Final targets shape-dytpe: {targets_list.shape}-{targets_list.dtype}")
+
+        # Write the sample to the sharded pth archives.
+        save_dict = {"latents": latents_list, "targets": targets_list}
+        torch.save(save_dict, os.path.join(args.output_dir, f"{args.save_prefix}_{args.model}.pth"))
 
 
 if __name__ == '__main__':
