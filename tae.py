@@ -450,6 +450,14 @@ def tae_patch128_vocab16384_px256():
 
 
 # vit for recognition
+def vit_recognition_numpatches256_vocab16_small(num_classes=None):
+    model = VITForRecognition(num_patches=256, vocab_size=16, decoder_embed_dim=384, decoder_depth=6, decoder_num_heads=6, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
 def vit_recognition_numpatches256_vocab64_small(num_classes=None):
     model = VITForRecognition(num_patches=256, vocab_size=64, decoder_embed_dim=384, decoder_depth=6, decoder_num_heads=6, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_recognition_numpatches256_vocab256_small(num_classes=None):
+    model = VITForRecognition(num_patches=256, vocab_size=256, decoder_embed_dim=384, decoder_depth=6, decoder_num_heads=6, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model

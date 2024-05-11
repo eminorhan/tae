@@ -1,2 +1,8 @@
 {"train_loss": 4.4235741109946245, "eval_loss": 3.7930827597879992, "iteration": 10000}
 {"train_loss": 3.1023724945545195, "eval_loss": 3.2041959478447475, "iteration": 20000}
+{"train_loss": 2.4949631779313086, "eval_loss": 2.9486779697200793, "iteration": 30000}
+{"train_loss": 2.0764923203229904, "eval_loss": 2.8662569102845663, "iteration": 40000}
+{"train_loss": 1.7355244865059853, "eval_loss": 2.8827546754649265, "iteration": 50000}
+{"train_loss": 1.4410828311145305, "eval_loss": 3.007932134242873, "iteration": 60000}
+{"train_loss": 1.1821400109410285, "eval_loss": 3.145691704873594, "iteration": 70000}
+{"train_loss": 0.9578654872536659, "eval_loss": 3.3207174298676803, "iteration": 80000}
