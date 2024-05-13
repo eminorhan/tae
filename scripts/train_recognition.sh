@@ -10,6 +10,10 @@
 #SBATCH --output=train_recognition_%A_%a.out
 #SBATCH --array=2
 
+export MASTER_ADDR=$(hostname -s)
+export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
+export WORLD_SIZE=1
+
 MODELS=(
 	tae_patch16_vocab16_px256
 	tae_patch16_vocab64_px256
