@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=240GB
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 #SBATCH --job-name=train_recognition
 #SBATCH --output=train_recognition_%A_%a.out
 #SBATCH --array=2
@@ -33,7 +33,7 @@ srun python -u ../train_recognition.py \
 	--model_ckpt '' \
 	--num_classes 1000 \
 	--accum_iter 1 \
-	--batch_size 256 \
+	--batch_size 1024 \
 	--lr 0.0001 \
 	--weight_decay 0.0 \
 	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \

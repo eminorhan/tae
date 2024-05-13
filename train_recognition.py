@@ -5,7 +5,8 @@ from pathlib import Path
 import torch
 print(torch.__version__)
 import torch.backends.cudnn as cudnn
-
+from typing import Any
+import numpy as np
 import tae
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
@@ -42,6 +43,16 @@ def get_args_parser():
     return parser
 
 
+class CustomDataset(StreamingDataset):
+    def __init__(self, local: str, batch_size: int, split: str, shuffle: bool, ) -> None:
+        super().__init__(local=local, batch_size=batch_size, split=split, shuffle=shuffle)
+
+    def __getitem__(self, idx:int) -> Any:
+        obj = super().__getitem__(idx)
+        x = obj['latent']
+        y = obj['class']
+        return torch.from_numpy(np.array(x, copy=True)), y
+    
 def main(args):
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
@@ -50,8 +61,8 @@ def main(args):
     device = torch.device(args.device)
 
     # train and val datasets
-    train_dataset = StreamingDataset(local=args.data_path, batch_size=args.batch_size, split='train', shuffle=True)
-    val_dataset = StreamingDataset(local=args.data_path, batch_size=args.batch_size, split='val', shuffle=True)
+    train_dataset = CustomDataset(local=args.data_path, batch_size=args.batch_size, split='train', shuffle=True)
+    val_dataset = CustomDataset(local=args.data_path, batch_size=args.batch_size, split='val', shuffle=True)
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size)
