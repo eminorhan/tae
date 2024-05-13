@@ -78,7 +78,7 @@ def main(args):
         # switch to eval mode
         model_without_ddp.eval()
 
-        with MDSWriter(out=args.output_dir, columns=columns, size_limit="100mb") as out:
+        with MDSWriter(out=args.output_dir, columns=columns, size_limit="500mb") as out:
             for it, (samples, targets) in enumerate(loader):
                 samples = samples.to(device, non_blocking=True)
                 # pass thru encoder

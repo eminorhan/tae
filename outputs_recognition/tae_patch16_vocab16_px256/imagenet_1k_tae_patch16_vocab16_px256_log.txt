@@ -1,6 +1,0 @@
-{"train_loss": 4.62604960042612, "eval_loss": 4.0730706990691665, "iteration": 10000}
-{"train_loss": 3.4606297521352767, "eval_loss": 3.59304453795438, "iteration": 20000}
-{"train_loss": 2.9049168120861055, "eval_loss": 3.384666467577682, "iteration": 30000}
-{"train_loss": 2.50113813893795, "eval_loss": 3.3378895836172946, "iteration": 40000}
-{"train_loss": 2.1579244274020195, "eval_loss": 3.346634154492709, "iteration": 50000}
-{"train_loss": 1.8499453904032708, "eval_loss": 3.463698038783098, "iteration": 60000}
