@@ -16,6 +16,8 @@ from engine import train_one_epoch, evaluate
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Training on a downstream recognition task', add_help=False)
+    parser.add_argument('--epochs', default=16, type=int, help='Epochs')
+    parser.add_argument('--start_epoch', default=0, type=int, help='Start epoch')
     parser.add_argument('--batch_size', default=256, type=int, help='Total batch size')
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--save_prefix', default="", type=str, help="""prefix for saving checkpoint and log files""")
