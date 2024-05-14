@@ -7,6 +7,8 @@ from pathlib import Path
 import torch
 print(torch.__version__)
 import torch.backends.cudnn as cudnn
+import webdataset as wds
+import torchvision.transforms as transforms
 
 import tae
 import util.misc as misc
@@ -22,10 +24,13 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
-    parser.add_argument('--model_ckpt', default='', type=str, help='Name of model to train')
+    parser.add_argument('--model_ckpt', default='', type=str, help='Model checkpoint to resume from')
     parser.add_argument('--num_classes', default=None, type=int, help='number of classes')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
-    parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
+
+    # Encoder parameters
+    parser.add_argument('--encoder', default='', type=str, help='Name of encoder')
+    parser.add_argument('--encoder_ckpt', default='', type=str, help='Encoder checkpoint to resume from')
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
@@ -34,10 +39,10 @@ def get_args_parser():
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
     parser.add_argument('--val_data_path', default='', type=str)
+    parser.add_argument('--num_workers', default=16, type=int, help='Number of data loading workers.')
 
     # Misc
     parser.add_argument('--output_dir', default='./output_dir', help='path where to save, empty for no saving')
-    parser.add_argument('--device', default='cuda', help='device to use for training/testing')
 
     return parser
 
@@ -47,34 +52,56 @@ def main(args):
     print("{}".format(args).replace(', ', ',\n'))
     cudnn.benchmark = True
 
-    device = torch.device(args.device)
+    device_encoder = torch.device('cuda:0')
+    device_model = torch.device('cuda:1')
 
-    # train and val datasets
-    train_data = torch.load(args.train_data_path, map_location='cpu')
-    val_data = torch.load(args.val_data_path, map_location='cpu')
+    # validation transforms
+    val_transform = transforms.Compose([
+        transforms.Resize(args.input_size + 32, interpolation=3),
+        transforms.CenterCrop(args.input_size),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
 
-    n_train = train_data['targets'].shape[0]
+    # training transforms
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    # train and val datasets and loaders
+    train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
+    train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
+
+    num_val_iters = 50000 // args.batch_size + 1
+    val_dataset = wds.WebDataset(args.val_data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(val_transform, lambda x: x)
+    val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers).with_epoch(num_val_iters)
+    print(f"Train and val data loaded.")
 
     # define the model
     model = tae.__dict__[args.model](num_classes=args.num_classes)
-    model.to(device)
-    model_without_ddp = model
+    model.to(device_model)
+    print(f"Model: {model}")
+    print(f"Number of params (M): {(sum(p.numel() for p in model.parameters() if p.requires_grad) / 1.e6)}")
 
-    # optionally compile model
-    if args.compile:
-        model = torch.compile(model)
-    
-    print(f"Model: {model_without_ddp}")
-    print(f"Number of params (M): {(sum(p.numel() for p in model_without_ddp.parameters() if p.requires_grad) / 1.e6)}")
+    # define the encoder
+    encoder = tae.__dict__[args.encoder]()
+    encoder.to(device_encoder)
+    encoder.eval()
+    print(f"Model: {encoder}")
+    print(f"Number of params (M): {(sum(p.numel() for p in encoder.parameters() if p.requires_grad) / 1.e6)}")
 
     # set wd as 0 for bias and norm layers
-    param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay, bias_wd=False)
+    param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
     criterion = torch.nn.CrossEntropyLoss()
     loss_scaler = NativeScaler()
 
-    misc.load_model(args.model_ckpt, model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
-    
+    misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler)
+    misc.load_model(args.encoder_ckpt, encoder)
+
     model.train()
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
@@ -83,18 +110,17 @@ def main(args):
     it = 0
 
     print("Starting TAE training!")
-    # infinite stream of training data
-    while True:
-        # randomly sample indices
-        indx = torch.randint(0, n_train, size=(args.batch_size, ))
+    # infinite stream for iterable webdataset
+    for it, (samples, targets) in enumerate(train_loader):
 
-        # take the corresponding slices of data
-        samples = train_data['latents'][indx]
-        targets = train_data['targets'][indx]
+        with torch.no_grad():
+            with torch.cuda.amp.autocast():
+                samples = samples.to(device_encoder, non_blocking=True)
+                samples = encoder.forward_encoder(samples)
 
         # move to gpu
-        samples = samples.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+        samples = samples.to(device_model, non_blocking=True)
+        targets = targets.to(device_model, non_blocking=True)
 
         with torch.cuda.amp.autocast():
             outputs = model(samples)
@@ -118,13 +144,13 @@ def main(args):
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
             print(f"Iteration {it}, evaluating ...")
-            test_stats = evaluate(val_data, args.batch_size, model_without_ddp, device)
+            test_stats = evaluate(val_loader, model, encoder, device_model, device_encoder)
             
             # save checkpoint only if eval_loss decreases
             if test_stats['acc1'] > best_eval_acc1:
                 print("Best eval accuracy improved! Saving checkpoint.")
                 save_dict = {
-                    'model': model_without_ddp.state_dict(),
+                    'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'args': args,
                     'iteration': it,
@@ -153,23 +179,27 @@ def main(args):
         it += 1    
 
 @torch.no_grad()
-def evaluate(val_data, batch_size, model, device):
+def evaluate(val_loader, model, encoder, device_model, device_encoder):
 
     criterion = torch.nn.CrossEntropyLoss()
     metric_logger = misc.MetricLogger(delimiter="  ")
 
-    n_val = val_data['targets'].shape[0]    
-
-    # switch to eval mode
+    # switch model to eval mode
     model.eval()
 
-    for i in range(0, n_val, batch_size):
+    for _, (samples, targets) in enumerate(val_loader):
 
-        samples = val_data['latents'][i:(i+batch_size)]
-        targets = val_data['targets'][i:(i+batch_size)]
+        with torch.cuda.amp.autocast():
+            samples = samples.to(device_encoder, non_blocking=True)
+            samples = encoder.forward_encoder(samples)
 
-        samples = samples.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+        # move to gpu
+        samples = samples.to(device_model, non_blocking=True)
+        targets = targets.to(device_model, non_blocking=True)
+
+        with torch.cuda.amp.autocast():
+            outputs = model(samples)
+            loss = criterion(outputs, targets)
 
         # compute loss
         with torch.cuda.amp.autocast():
@@ -185,7 +215,9 @@ def evaluate(val_data, batch_size, model, device):
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'.format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
+    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'.format(
+        top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss
+        ))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
