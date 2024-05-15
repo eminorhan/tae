@@ -9,6 +9,8 @@ print(torch.__version__)
 import torch.backends.cudnn as cudnn
 import webdataset as wds
 import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader, SequentialSampler
 
 import tae
 import util.misc as misc
@@ -65,7 +67,7 @@ def main(args):
 
     # training transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=args.jitter_scale, ratio=args.jitter_ratio, interpolation=3),
+        transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=3),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -75,9 +77,9 @@ def main(args):
     train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
     train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
 
-    num_val_iters = 50000 // args.batch_size + 1
-    val_dataset = wds.WebDataset(args.val_data_path, resampled=False).decode("pil").to_tuple("jpg", "cls").map_tuple(val_transform, lambda x: x)
-    val_loader = wds.WebLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers).with_epoch(num_val_iters)
+    val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
+    val_sampler = SequentialSampler(val_dataset)
+    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # NOTE: we use a larger batch size for eval
     print(f"Train and val data loaded.")
 
     # define the model
