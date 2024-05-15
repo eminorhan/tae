@@ -165,7 +165,11 @@ def main(args):
             # gather the stats from all processes
             metric_logger.synchronize_between_processes()
             train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'eval_loss': test_stats['loss'], 'iteration': it}
+            log_stats = {
+                **{f'train_{k}': v for k, v in train_stats.items()},
+                **{f'test_{k}': v for k, v in test_stats.items()}, 
+                'iteration': it
+                }
 
             # write log
             if misc.is_main_process():
