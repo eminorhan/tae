@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
 #SBATCH --time=8:00:00
-#SBATCH --job-name=train_recognition_noncached
-#SBATCH --output=train_recognition_noncached_%A_%a.out
+#SBATCH --job-name=train_recognition_noncached_without_eval
+#SBATCH --output=train_recognition_noncached_without_eval_%A_%a.out
 #SBATCH --array=1
 
 MODELS=(
@@ -27,19 +27,18 @@ MODELS=(
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
-srun python -u ../train_recognition_noncached.py \
+srun python -u ../train_recognition_noncached_without_eval.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
-	--model vit_recognition_numpatches256_vocab64_base \
+	--model vit_recognition_numpatches256_vocab64_small \
 	--model_ckpt '' \
-	--num_classes 1000 \
+	--num_classes 19167 \
 	--batch_size 256 \
 	--input_size 256 \
 	--num_workers 16 \
 	--save_freq 10000 \
 	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \
-	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-1k-wds/imagenet1k-train-{0000..1023}.tar" \
-	--val_data_path /scratch/eo41/imagenet/val \
-	--save_prefix imagenet_1k
+	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
+	--save_prefix imagenet_21k
 
 echo "Done"

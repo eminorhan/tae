@@ -18,7 +18,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('Training on a downstream recognition task', add_help=False)
+    parser = argparse.ArgumentParser('Training on a downstream recognition task without eval', add_help=False)
     parser.add_argument('--batch_size', default=256, type=int, help='Total batch size')
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--save_prefix', default="", type=str, help='Prefix for saving checkpoint and log files')
@@ -40,7 +40,6 @@ def get_args_parser():
 
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
-    parser.add_argument('--val_data_path', default='', type=str)
     parser.add_argument('--num_workers', default=16, type=int, help='Number of data loading workers.')
 
     # Misc
@@ -57,14 +56,6 @@ def main(args):
     device_encoder = torch.device('cuda:0')
     device_model = torch.device('cuda:1')
 
-    # validation transforms
-    val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=3),
-        transforms.CenterCrop(args.input_size),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
-
     # training transforms
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=3),
@@ -76,11 +67,7 @@ def main(args):
     # train and val datasets and loaders
     train_dataset = wds.WebDataset(args.train_data_path, resampled=True).shuffle(10000, initial=10000).decode("pil").to_tuple("jpg", "cls").map_tuple(train_transform, lambda x: x)
     train_loader = wds.WebLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
-
-    val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
-    val_sampler = SequentialSampler(val_dataset)
-    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # NOTE: we use a larger batch size for eval
-    print(f"Train and val data loaded.")
+    print(f"Train data loaded.")
 
     # define the model
     model = tae.__dict__[args.model](num_classes=args.num_classes)
@@ -108,8 +95,6 @@ def main(args):
     metric_logger = misc.MetricLogger(delimiter="  ")
     optimizer.zero_grad()
 
-    best_eval_acc1 = 0.0
-
     print("Starting training!")
     # infinite stream for iterable webdataset
     for it, (samples, targets) in enumerate(train_loader):
@@ -126,7 +111,9 @@ def main(args):
         with torch.cuda.amp.autocast():
             outputs = model(samples)
             loss = criterion(outputs, targets)
-        
+
+        acc1, acc5 = misc.accuracy(outputs, targets, topk=(1, 5))
+
         loss_value = loss.item()
 
         if not math.isfinite(loss_value):
@@ -140,35 +127,29 @@ def main(args):
 
         torch.cuda.synchronize()
 
+        bsize = samples.shape[0]
         metric_logger.update(loss=loss_value)
+        metric_logger.meters['acc1'].update(acc1.item(), n=bsize)
+        metric_logger.meters['acc5'].update(acc5.item(), n=bsize)
 
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
-            print(f"Iteration {it}, evaluating ...")
-            test_stats = evaluate(val_loader, model, encoder, device_model, device_encoder)
-            
-            # save checkpoint only if eval_loss decreases
-            if test_stats['acc1'] > best_eval_acc1:
-                print("Best eval accuracy improved! Saving checkpoint.")
-                save_dict = {
-                    'model': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'args': args,
-                    'iteration': it,
-                    'scaler': loss_scaler.state_dict(),
-                }
+            print(f"Iteration {it}")
+        
+            save_dict = {
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'args': args,
+                'iteration': it,
+                'scaler': loss_scaler.state_dict(),
+            }
 
-                misc.save_on_master(save_dict, os.path.join(args.output_dir, f"{args.save_prefix}_{args.model}_checkpoint.pth"))
-                best_eval_acc1 = test_stats['acc1']
+            misc.save_on_master(save_dict, os.path.join(args.output_dir, f"{args.save_prefix}_{args.model}_checkpoint.pth"))
 
             # gather the stats from all processes
             metric_logger.synchronize_between_processes()
             train_stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
-            log_stats = {
-                **{f'train_{k}': v for k, v in train_stats.items()},
-                **{f'test_{k}': v for k, v in test_stats.items()}, 
-                'iteration': it
-                }
+            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'iteration': it}
 
             # write log
             if misc.is_main_process():
@@ -178,47 +159,6 @@ def main(args):
             # start a fresh logger to wipe off old stats
             metric_logger = misc.MetricLogger(delimiter="  ")
 
-            # switch back to train mode, not 100% sure if this is strictly necessary since we're passing the unwrapped model to eval now
-            model.train()
-
-@torch.no_grad()
-def evaluate(val_loader, model, encoder, device_model, device_encoder):
-
-    criterion = torch.nn.CrossEntropyLoss()
-    metric_logger = misc.MetricLogger(delimiter="  ")
-
-    # switch model to eval mode
-    model.eval()
-
-    for _, (samples, targets) in enumerate(val_loader):
-
-        with torch.cuda.amp.autocast():
-            samples = samples.to(device_encoder, non_blocking=True)
-            samples = encoder.forward_encoder(samples)
-
-        # move to gpu
-        samples = samples.to(device_model, non_blocking=True)
-        targets = targets.to(device_model, non_blocking=True)
-
-        # compute loss
-        with torch.cuda.amp.autocast():
-            outputs = model(samples)
-            loss = criterion(outputs, targets)
-
-        acc1, acc5 = misc.accuracy(outputs, targets, topk=(1, 5))
-
-        bsize = samples.shape[0]
-        metric_logger.update(loss=loss.item())
-        metric_logger.meters['acc1'].update(acc1.item(), n=bsize)
-        metric_logger.meters['acc5'].update(acc5.item(), n=bsize)
-
-    # gather the stats from all processes
-    metric_logger.synchronize_between_processes()
-    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'.format(
-        top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss
-        ))
-
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 if __name__ == '__main__':
     args = get_args_parser()
