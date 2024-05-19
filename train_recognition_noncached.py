@@ -82,8 +82,11 @@ def main(args):
     val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # NOTE: we use a larger batch size for eval
     print(f"Train and val data loaded.")
 
-    # define the model
-    model = tae.__dict__[args.model](num_classes=args.num_classes)
+    # define the model (a bit ugly and hacky atm)
+    if args.model_ckpt:
+        model = tae.__dict__[args.model](num_classes=19167)  # load imagenet-21k pretrained checkpoint
+    else:
+        model = tae.__dict__[args.model](num_classes=args.num_classes)
     model.to(device_model)
     print(f"Model: {model}")
     print(f"Number of params (M): {(sum(p.numel() for p in model.parameters() if p.requires_grad) / 1.e6)}")
@@ -101,7 +104,10 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     loss_scaler = NativeScaler()
 
+    # optionally load model and encoder (a bit ugly and hacky atm)
     misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler)
+    if args.model_ckpt:
+        model.head = torch.nn.Linear(model.head.weight.shape[-1], args.num_classes, bias=True)
     misc.load_model(args.encoder_ckpt, encoder)
 
     model.train()

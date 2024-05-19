@@ -315,7 +315,7 @@ def load_model(ckpt, model_without_ddp, optimizer=None, loss_scaler=None, optim_
         interpolate_pos_embed(model_without_ddp, checkpoint['model'])        
 
         model_without_ddp.load_state_dict(checkpoint['model'], strict=False)
-        print(f"Resume checkpoint {ckpt}")
+        print(f"Resumed checkpoint {ckpt}")
         if 'optimizer' in checkpoint and optim_resume:
             optimizer.load_state_dict(checkpoint['optimizer'])
             if 'scaler' in checkpoint:
