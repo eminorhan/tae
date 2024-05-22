@@ -107,7 +107,7 @@ def main(args):
     # optionally load model and encoder (a bit ugly and hacky atm)
     misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler)
     if args.model_ckpt:
-        model.head = torch.nn.Linear(model.head.weight.shape[-1], args.num_classes, bias=True)
+        model.head = torch.nn.Linear(model.head.weight.shape[-1], args.num_classes, bias=True).to(device_model)
     misc.load_model(args.encoder_ckpt, encoder)
 
     model.train()

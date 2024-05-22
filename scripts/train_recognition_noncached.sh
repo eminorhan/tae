@@ -30,8 +30,8 @@ MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 srun python -u ../train_recognition_noncached.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
-	--model vit_recognition_numpatches256_vocab64_small \
-	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_small_checkpoint.pth \
+	--model vit_recognition_numpatches256_vocab64_base \
+	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_base_checkpoint.pth \
 	--num_classes 1000 \
 	--batch_size 256 \
 	--input_size 256 \

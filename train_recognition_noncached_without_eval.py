@@ -153,7 +153,7 @@ def main(args):
 
             # write log
             if misc.is_main_process():
-                with (Path(args.output_dir) / (args.save_prefix + args.model + "_log.txt")).open("a") as f:
+                with (Path(args.output_dir) / (args.save_prefix + "_" + args.model + "_log.txt")).open("a") as f:
                     f.write(json.dumps(log_stats) + "\n")
 
             # start a fresh logger to wipe off old stats
