@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:h100:2
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=300GB
+#SBATCH --mem=360GB
 #SBATCH --time=48:00:00
 #SBATCH --job-name=train_recognition_noncached_without_eval
 #SBATCH --output=train_recognition_noncached_without_eval_%A_%a.out
@@ -33,7 +33,7 @@ srun python -u ../train_recognition_noncached_without_eval.py \
 	--model vit_recognition_numpatches256_vocab64_base \
 	--model_ckpt '' \
 	--num_classes 19167 \
-	--batch_size 512 \
+	--batch_size 768 \
 	--input_size 256 \
 	--num_workers 16 \
 	--save_freq 10000 \
