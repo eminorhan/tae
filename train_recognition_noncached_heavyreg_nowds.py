@@ -94,7 +94,7 @@ def main(args):
 
     val_dataset = ImageFolder(args.val_data_path, transform=val_transform)
     val_sampler = SequentialSampler(val_dataset)
-    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=8*args.batch_size, num_workers=args.num_workers, pin_memory=True, drop_last=False)  # NOTE: we use a larger batch size for eval
+    val_loader = DataLoader(val_dataset, sampler=val_sampler, batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True, drop_last=False)
     print(f"Train and val data loaded.")
 
     # define the model (a bit ugly and hacky atm)
