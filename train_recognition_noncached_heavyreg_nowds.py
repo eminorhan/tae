@@ -50,8 +50,7 @@ def get_args_parser():
 
 def get_mixup_cutmix(*, mixup_alpha, cutmix_alpha, num_classes):
 
-    mixup_cutmix = [transforms.MixUp(alpha=mixup_alpha, num_classes=num_classes),
-                    transforms.CutMix(alpha=cutmix_alpha, num_classes=num_classes)]
+    mixup_cutmix = [transforms.MixUp(alpha=mixup_alpha, num_classes=num_classes), transforms.CutMix(alpha=cutmix_alpha, num_classes=num_classes)]
     
     return transforms.RandomChoice(mixup_cutmix)
 
@@ -66,7 +65,7 @@ def main(args):
 
     # validation transforms
     val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=3),
+        transforms.Resize(args.input_size + 32, interpolation=InterpolationMode.BILINEAR),
         transforms.CenterCrop(args.input_size),
         transforms.PILToTensor(),
         transforms.ToDtype(torch.float, scale=True),
@@ -76,7 +75,7 @@ def main(args):
 
     # training transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=3),
+        transforms.RandomResizedCrop(args.input_size, scale=[0.1, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BILINEAR),
         transforms.RandomHorizontalFlip(),
         transforms.RandAugment(interpolation=InterpolationMode.BILINEAR),
         transforms.PILToTensor(),
@@ -194,7 +193,7 @@ def main(args):
 
         # write log
         if misc.is_main_process():
-            with (Path(args.output_dir) / (args.save_prefix + args.model + "_log.txt")).open("a") as f:
+            with (Path(args.output_dir) / (args.save_prefix + "_" + args.model + "_log.txt")).open("a") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
         # start a fresh logger to wipe off old stats

@@ -8,9 +8,10 @@ import torch
 print(torch.__version__)
 import torch.backends.cudnn as cudnn
 import webdataset as wds
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, SequentialSampler
+from torchvision.transforms.functional import InterpolationMode
 
 import tae
 import util.misc as misc
@@ -59,18 +60,23 @@ def main(args):
 
     # validation transforms
     val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=3),
+        transforms.Resize(args.input_size + 32, interpolation=InterpolationMode.BILINEAR),
         transforms.CenterCrop(args.input_size),
-        transforms.ToTensor(),
+        transforms.PILToTensor(),
+        transforms.ToDtype(torch.float, scale=True),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        transforms.ToPureTensor()
     ])
 
     # training transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=3),
+        transforms.RandomResizedCrop(args.input_size, scale=[0.1, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BILINEAR),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
+        transforms.RandAugment(interpolation=InterpolationMode.BILINEAR),
+        transforms.PILToTensor(),
+        transforms.ToDtype(torch.float, scale=True),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        transforms.ToPureTensor()
     ])
 
     # train and val datasets and loaders
@@ -101,7 +107,7 @@ def main(args):
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     loss_scaler = NativeScaler()
 
     # optionally load model and encoder (a bit ugly and hacky atm)

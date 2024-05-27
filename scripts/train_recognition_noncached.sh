@@ -33,7 +33,7 @@ srun python -u ../train_recognition_noncached.py \
 	--model vit_recognition_numpatches256_vocab64_base \
 	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_base_checkpoint.pth \
 	--num_classes 1000 \
-	--batch_size 512 \
+	--batch_size 896 \
 	--input_size 256 \
 	--num_workers 16 \
 	--save_freq 10000 \
