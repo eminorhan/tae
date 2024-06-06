@@ -20,6 +20,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Training on a downstream recognition task', add_help=False)
+    parser.add_argument('--epochs', default=100, type=int, help='Num epochs')
     parser.add_argument('--batch_size', default=256, type=int, help='Total batch size')
     parser.add_argument('--accum_iter', default=1, type=int, help='Accumulate gradient iterations (for increasing the effective batch size under memory constraints)')
     parser.add_argument('--save_prefix', default="", type=str, help='Prefix for saving checkpoint and log files')
@@ -36,8 +37,10 @@ def get_args_parser():
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='Weight decay (default: 0.05)')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate (absolute lr)')
-
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (absolute lr)')
+    parser.add_argument('--min_lr', type=float, default=0.00001, help='Lower lr bound for cyclic schedulers that hit 0')
+    parser.add_argument('--warmup_epochs', type=int, default=0, help='Epochs to warm up learning rate')
+    
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
     parser.add_argument('--val_data_path', default='', type=str)
@@ -75,7 +78,7 @@ def main(args):
 
     # training transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=[0.1, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BILINEAR),
+        transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BILINEAR),
         transforms.RandomHorizontalFlip(),
         transforms.RandAugment(interpolation=InterpolationMode.BILINEAR),
         transforms.PILToTensor(),
@@ -133,8 +136,12 @@ def main(args):
 
     print("Starting training!")
     # infinite stream for iterable webdataset
-    for epoch in range(100):
+    for epoch in range(args.epochs):
         for it, (samples, targets) in enumerate(train_loader):
+
+            # we use a per iteration (instead of per epoch) lr scheduler
+            if it % args.accum_iter == 0:
+                misc.adjust_learning_rate(optimizer, it / len(train_loader) + epoch, args)
 
             with torch.no_grad():
                 with torch.cuda.amp.autocast():
@@ -163,6 +170,8 @@ def main(args):
             torch.cuda.synchronize()
 
             metric_logger.update(loss=loss_value)
+            lr = optimizer.param_groups[0]["lr"]
+            metric_logger.update(lr=lr)
 
         # estimate eval loss
         print(f"Iteration {it}, evaluating ...")

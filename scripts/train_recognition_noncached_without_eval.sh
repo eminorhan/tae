@@ -8,7 +8,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --job-name=train_recognition_noncached_without_eval
 #SBATCH --output=train_recognition_noncached_without_eval_%A_%a.out
-#SBATCH --array=1
+#SBATCH --array=2
 
 MODELS=(
 	tae_patch16_vocab16_px256
@@ -30,7 +30,7 @@ MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 srun python -u ../train_recognition_noncached_without_eval.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
-	--model vit_recognition_numpatches256_vocab64_base \
+	--model vit_recognition_numpatches256_vocab256_base \
 	--model_ckpt '' \
 	--num_classes 19167 \
 	--batch_size 896 \

@@ -60,7 +60,7 @@ def main(args):
 
     # validation transforms
     val_transform = transforms.Compose([
-        transforms.Resize(args.input_size + 32, interpolation=InterpolationMode.BILINEAR),
+        transforms.Resize(args.input_size + 32, interpolation=InterpolationMode.BICUBIC),
         transforms.CenterCrop(args.input_size),
         transforms.PILToTensor(),
         transforms.ToDtype(torch.float, scale=True),
@@ -70,9 +70,9 @@ def main(args):
 
     # training transforms
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(args.input_size, scale=[0.1, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BILINEAR),
+        transforms.RandomResizedCrop(args.input_size, scale=[0.2, 1.0], ratio=[3.0/4.0, 4.0/3.0], interpolation=InterpolationMode.BICUBIC),
         transforms.RandomHorizontalFlip(),
-        transforms.RandAugment(interpolation=InterpolationMode.BILINEAR),
+        transforms.RandAugment(interpolation=InterpolationMode.BICUBIC),
         transforms.PILToTensor(),
         transforms.ToDtype(torch.float, scale=True),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -184,7 +184,7 @@ def main(args):
 
             # write log
             if misc.is_main_process():
-                with (Path(args.output_dir) / (args.save_prefix + args.model + "_log.txt")).open("a") as f:
+                with (Path(args.output_dir) / (args.save_prefix + "_" + args.model + "_log.txt")).open("a") as f:
                     f.write(json.dumps(log_stats) + "\n")
 
             # start a fresh logger to wipe off old stats

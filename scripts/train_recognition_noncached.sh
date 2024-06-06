@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:h100:2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --job-name=train_recognition_noncached
 #SBATCH --output=train_recognition_noncached_%A_%a.out
 #SBATCH --array=1

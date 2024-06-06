@@ -33,9 +33,13 @@ srun python -u ../train_recognition_noncached_heavyreg_nowds.py \
 	--model vit_recognition_numpatches256_vocab64_base \
 	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_base_checkpoint.pth \
 	--num_classes 1000 \
+	--epochs 25 \
 	--batch_size 896 \
 	--input_size 256 \
 	--num_workers 16 \
+	--lr 0.001 \
+	--min_lr 0.000001 \
+	--warmup_epochs 5 \
 	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \
 	--train_data_path /scratch/work/public/imagenet/train \
 	--val_data_path /scratch/eo41/imagenet/val \
