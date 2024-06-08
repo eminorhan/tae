@@ -38,9 +38,7 @@ def get_args_parser():
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='Weight decay (default: 0.05)')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (absolute lr)')
-    parser.add_argument('--min_lr', type=float, default=0.00001, help='Lower lr bound for cyclic schedulers that hit 0')
-    parser.add_argument('--warmup_epochs', type=int, default=0, help='Epochs to warm up learning rate')
-    
+
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
     parser.add_argument('--val_data_path', default='', type=str)
@@ -119,6 +117,7 @@ def main(args):
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40], gamma=0.1)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     loss_scaler = NativeScaler()
 
@@ -138,10 +137,6 @@ def main(args):
     # infinite stream for iterable webdataset
     for epoch in range(args.epochs):
         for it, (samples, targets) in enumerate(train_loader):
-
-            # we use a per iteration (instead of per epoch) lr scheduler
-            if it % args.accum_iter == 0:
-                misc.adjust_learning_rate(optimizer, it / len(train_loader) + epoch, args)
 
             with torch.no_grad():
                 with torch.cuda.amp.autocast():
@@ -170,8 +165,6 @@ def main(args):
             torch.cuda.synchronize()
 
             metric_logger.update(loss=loss_value)
-            lr = optimizer.param_groups[0]["lr"]
-            metric_logger.update(lr=lr)
 
         # estimate eval loss
         print(f"Iteration {it}, evaluating ...")
@@ -184,7 +177,7 @@ def main(args):
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'args': args,
-                'iteration': it,
+                'epoch': epoch,
                 'scaler': loss_scaler.state_dict(),
             }
 
@@ -197,7 +190,7 @@ def main(args):
         log_stats = {
             **{f'train_{k}': v for k, v in train_stats.items()},
             **{f'test_{k}': v for k, v in test_stats.items()}, 
-            'iteration': it
+            'epoch': epoch
             }
 
         # write log
@@ -210,6 +203,9 @@ def main(args):
 
         # switch back to train mode, not 100% sure if this is strictly necessary since we're passing the unwrapped model to eval now
         model.train()
+        
+        # increment lr scheduler
+        scheduler.step()
 
 @torch.no_grad()
 def evaluate(val_loader, model, encoder, device_model, device_encoder):
