@@ -29,14 +29,17 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument('--model', default='', type=str, help='Name of model to train')
-    parser.add_argument('--resume', default='', help='resume from a checkpoint')
+    parser.add_argument('--ckpt', default='', help='resume from a checkpoint')
     parser.add_argument('--input_size', default=224, type=int, help='images input size')
     parser.add_argument('--compile', action='store_true', help='whether to compile the model for improved efficiency (default: false)')
     parser.add_argument('--display', action='store_true', help='whether to display reconstruction at regular intervals.')
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='weight decay (default: 0.05)')
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate (absolute lr)')
+    parser.add_argument('--max_lr', type=float, default=0.0001, help='max learning rate')
+    parser.add_argument('--min_lr', type=float, default=0.00001, help='min learning rate')
+    parser.add_argument('--switch_it', type=float, default=900000, help='iteration at which to switch to lower lr')
+    parser.add_argument('--num_its', type=float, default=1000001, help='total number of iterations')
 
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
@@ -103,10 +106,10 @@ def main(args):
 
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay, bias_wd=False)
-    optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
+    optimizer = torch.optim.AdamW(param_groups, lr=args.max_lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
     loss_scaler = NativeScaler()
 
-    misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
+    misc.load_model(args.ckpt, model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
     
     model.train()
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -117,6 +120,12 @@ def main(args):
     print("Starting TAE training!")
     # infinite stream for iterable webdataset
     for it, (samples, _) in enumerate(train_loader):
+
+        if it == args.num_its:
+            break
+
+        if it % args.accum_iter == 0:
+            misc.adjust_learning_rate(optimizer, args.max_lr, args.min_lr, it, args.switch_it)
 
         # optionally pick 8 examples for display and softmax estimation at regular intervals
         if args.display and it % args.save_freq == 0:
@@ -141,7 +150,8 @@ def main(args):
         torch.cuda.synchronize()
 
         metric_logger.update(loss=loss_value)
-
+        metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+        
         if it != 0 and it % args.save_freq == 0:
             # estimate eval loss
             print(f"Iteration {it}, evaluating ...")

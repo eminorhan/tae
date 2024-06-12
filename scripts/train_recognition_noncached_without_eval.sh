@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:h100:2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
-#SBATCH --time=48:00:00
+#SBATCH --time=168:00:00
 #SBATCH --job-name=train_recognition_noncached_without_eval
 #SBATCH --output=train_recognition_noncached_without_eval_%A_%a.out
 #SBATCH --array=2
@@ -35,8 +35,12 @@ srun python -u ../train_recognition_noncached_without_eval.py \
 	--num_classes 19167 \
 	--batch_size 896 \
 	--input_size 256 \
+	--max_lr 0.0001 \
+	--min_lr 0.00001 \
+	--switch_it 400000 \
+	--num_its 500001 \
 	--num_workers 16 \
-	--save_freq 10000 \
+	--save_freq 100000 \
 	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \
 	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
 	--save_prefix imagenet_21k

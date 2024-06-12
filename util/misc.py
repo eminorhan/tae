@@ -398,12 +398,12 @@ def accuracy(output, target, topk=(1,)):
         return res
     
 
-def adjust_learning_rate(optimizer, epoch, args):
-    """Decay the learning rate with half-cycle cosine after warmup"""
-    if epoch < args.warmup_epochs:
-        lr = args.lr * epoch / args.warmup_epochs
+def adjust_learning_rate(optimizer, max_lr, min_lr, it, switch_it):
+    """Decay the learning rate step-wise"""
+    if it < switch_it:
+        lr = max_lr
     else:
-        lr = args.min_lr + (args.lr - args.min_lr) * 0.5 * (1.0 + math.cos(math.pi * (epoch - args.warmup_epochs) / (args.epochs - args.warmup_epochs)))
+        lr = min_lr
 
     for param_group in optimizer.param_groups:
         if "lr_scale" in param_group:

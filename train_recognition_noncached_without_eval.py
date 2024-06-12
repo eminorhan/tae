@@ -36,7 +36,10 @@ def get_args_parser():
 
     # Optimizer parameters
     parser.add_argument('--weight_decay', type=float, default=0.05, help='Weight decay (default: 0.05)')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate (absolute lr)')
+    parser.add_argument('--max_lr', type=float, default=0.0001, help='max learning rate')
+    parser.add_argument('--min_lr', type=float, default=0.00001, help='min learning rate')
+    parser.add_argument('--switch_it', type=float, default=900000, help='iteration at which to switch to lower lr')
+    parser.add_argument('--num_its', type=float, default=1000001, help='total number of iterations')
 
     # Dataset parameters
     parser.add_argument('--train_data_path', default='', type=str)
@@ -84,7 +87,7 @@ def main(args):
 
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
-    optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
+    optimizer = torch.optim.AdamW(param_groups, lr=args.max_lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
     criterion = torch.nn.CrossEntropyLoss()
     loss_scaler = NativeScaler()
 
@@ -98,6 +101,12 @@ def main(args):
     print("Starting training!")
     # infinite stream for iterable webdataset
     for it, (samples, targets) in enumerate(train_loader):
+
+        if it == args.num_its:
+            break
+
+        if it % args.accum_iter == 0:
+            misc.adjust_learning_rate(optimizer, args.max_lr, args.min_lr, it, args.switch_it)
 
         with torch.no_grad():
             with torch.cuda.amp.autocast():
@@ -133,7 +142,7 @@ def main(args):
         metric_logger.meters['acc5'].update(acc5.item(), n=bsize)
 
         if it != 0 and it % args.save_freq == 0:
-            # estimate eval loss
+            # estimate ckpt loss
             print(f"Iteration {it}")
         
             save_dict = {

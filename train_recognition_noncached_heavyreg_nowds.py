@@ -117,7 +117,7 @@ def main(args):
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1)
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     loss_scaler = NativeScaler()
 
@@ -134,10 +134,8 @@ def main(args):
     best_eval_acc1 = 0.0
 
     print("Starting training!")
-    # infinite stream for iterable webdataset
     for epoch in range(args.epochs):
         for it, (samples, targets) in enumerate(train_loader):
-
             with torch.no_grad():
                 with torch.cuda.amp.autocast():
                     samples = samples.to(device_encoder, non_blocking=True)

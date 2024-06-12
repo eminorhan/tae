@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:h100:2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
-#SBATCH --time=36:00:00
+#SBATCH --time=168:00:00
 #SBATCH --job-name=train_recognition_noncached_heavyreg_nowds
 #SBATCH --output=train_recognition_noncached_heavyreg_nowds_%A_%a.out
 #SBATCH --array=1
@@ -33,7 +33,7 @@ srun python -u ../train_recognition_noncached_heavyreg_nowds.py \
 	--model vit_recognition_numpatches256_vocab64_base \
 	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_base_checkpoint.pth \
 	--num_classes 1000 \
-	--epochs 50 \
+	--epochs 100 \
 	--batch_size 896 \
 	--input_size 256 \
 	--num_workers 16 \
