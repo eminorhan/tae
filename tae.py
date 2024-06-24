@@ -8,6 +8,7 @@
 # timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
 # DeiT: https://github.com/facebookresearch/deit
 # --------------------------------------------------------
+from collections import OrderedDict
 from functools import partial
 from itertools import repeat
 import collections.abc
@@ -354,12 +355,16 @@ class VITForSegmentation(nn.Module):
        
         super().__init__()
 
+        self.aux_depth = int(decoder_depth * 0.75)
+
         # --------------------------------------------------------------------------
         self.decoder_embed = nn.Linear(vocab_size, decoder_embed_dim, bias=True)
         self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches, decoder_embed_dim))
         self.decoder_blocks = nn.ModuleList([Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer) for i in range(decoder_depth)])
         self.decoder_norm = norm_layer(decoder_embed_dim)
+        self.aux_decoder_norm = norm_layer(decoder_embed_dim)
         self.head = nn.Linear(decoder_embed_dim, patch_size**2 * num_classes, bias=True)
+        self.aux_head = nn.Linear(decoder_embed_dim, patch_size**2 * num_classes, bias=True)
         # --------------------------------------------------------------------------
 
         self.initialize_weights()
@@ -388,12 +393,22 @@ class VITForSegmentation(nn.Module):
         # add pos embed
         x = x + self.decoder_pos_embed
 
+        # result will hold both "out" and "aux"
+        result = OrderedDict()
+
         # apply transformer blocks
-        for blk in self.decoder_blocks:
+        for i, blk in enumerate(self.decoder_blocks):
             x = blk(x)
+            if i+1 == self.aux_depth:
+                aux = self.aux_head(self.aux_decoder_norm(x))
+
         x = self.decoder_norm(x)
         x = self.head(x)  # [N, L, p*p*c]
-        return x
+
+        result["out"] = x
+        result["aux"] = aux
+
+        return result
 
 
 # patch 16

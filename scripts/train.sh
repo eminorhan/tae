@@ -8,7 +8,7 @@
 #SBATCH --time=168:00:00
 #SBATCH --job-name=train_tae_wds
 #SBATCH --output=train_tae_wds_%A_%a.out
-#SBATCH --array=0
+#SBATCH --array=0-11
 
 export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
@@ -40,12 +40,12 @@ srun python -u ../train.py \
 	--input_size 256 \
 	--max_lr 0.0001 \
 	--min_lr 0.00001 \
-	--switch_it 900000 \
-	--num_its 1000001 \
+	--switch_it 1000000 \
+	--num_its 1150001 \
 	--weight_decay 0.0 \
 	--num_workers 16 \
-	--save_freq 100000 \
-	--output_dir /scratch/eo41/tae/new_outputs/${MODEL} \
+	--save_freq 50000 \
+	--output_dir /scratch/eo41/tae/outputs/${MODEL} \
 	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
 	--val_data_path /scratch/eo41/imagenet/val \
 	--save_prefix ${MODEL} \
