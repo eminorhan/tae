@@ -356,6 +356,7 @@ class VITForSegmentation(nn.Module):
         super().__init__()
 
         self.aux_depth = int(decoder_depth * 0.75)
+        self.patch_size = patch_size
 
         # --------------------------------------------------------------------------
         self.decoder_embed = nn.Linear(vocab_size, decoder_embed_dim, bias=True)
@@ -386,6 +387,20 @@ class VITForSegmentation(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
+    def unpatchify(self, x):
+        """
+        x: (N, L, patch_size**2 * C)
+        imgs: (N, C, H, W)
+        """
+        p = self.patch_size
+        h = w = int(x.shape[1]**.5)
+        assert h * w == x.shape[1]
+        
+        x = x.reshape(shape=(x.shape[0], h, w, p, p, 3))
+        x = torch.einsum('nhwpqc->nchpwq', x)
+        imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
+        return imgs
+
     def forward(self, x):
         # embed tokens
         x = self.decoder_embed(x)
@@ -400,10 +415,12 @@ class VITForSegmentation(nn.Module):
         for i, blk in enumerate(self.decoder_blocks):
             x = blk(x)
             if i+1 == self.aux_depth:
-                aux = self.aux_head(self.aux_decoder_norm(x))
+                aux = self.aux_head(self.aux_decoder_norm(x))  # auxiliary head
+                aux = self.unpatchify(aux)
 
         x = self.decoder_norm(x)
-        x = self.head(x)  # [N, L, p*p*c]
+        x = self.head(x)  # [N, L, P*P*C]
+        x = self.unpatchify(x)  # [N, C, H, W]
 
         result["out"] = x
         result["aux"] = aux

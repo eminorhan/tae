@@ -40,8 +40,8 @@ srun python -u ../train.py \
 	--input_size 256 \
 	--max_lr 0.0001 \
 	--min_lr 0.00001 \
-	--switch_it 1000000 \
-	--num_its 1150001 \
+	--switch_it 450000 \
+	--num_its 600001 \
 	--weight_decay 0.0 \
 	--num_workers 16 \
 	--save_freq 50000 \
