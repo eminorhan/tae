@@ -1,7 +1,6 @@
 import datetime
 import os
 import time
-import warnings
 import argparse
 
 import presets
@@ -140,7 +139,7 @@ def main(args):
     if args.model_ckpt:
         model = tae.__dict__[args.model](num_classes=1000)  # load imagenet-1k pretrained checkpoint
     else:
-        model = tae.__dict__[args.model](num_classes=args.num_classes)
+        model = tae.__dict__[args.model](num_classes=num_classes)
     model.to(device_model)
     print(f"Model: {model}")
     print(f"Number of params (M): {(sum(p.numel() for p in model.parameters() if p.requires_grad) / 1.e6)}")
@@ -162,7 +161,7 @@ def main(args):
     # optionally load model and encoder (a bit ugly and hacky atm)
     misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler)
     if args.model_ckpt:
-        model.head = torch.nn.Linear(model.head.weight.shape[-1], args.num_classes, bias=True).to(device_model)
+        model.head = torch.nn.Linear(model.head.weight.shape[-1], num_classes, bias=True).to(device_model)
     misc.load_model(args.encoder_ckpt, encoder)
 
     start_time = time.time()
@@ -181,7 +180,6 @@ def main(args):
             "scaler": loss_scaler.state_dict()
         }
 
-        utils.save_on_master(checkpoint, os.path.join(args.output_dir, f"model_{epoch}.pth"))
         utils.save_on_master(checkpoint, os.path.join(args.output_dir, "checkpoint.pth"))
 
     total_time = time.time() - start_time
@@ -193,7 +191,10 @@ def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description="PyTorch Segmentation Training", add_help=add_help)
     parser.add_argument("--data_path", default="", type=str, help="dataset path")
     parser.add_argument("--dataset", default="coco", type=str, help="dataset name")
-    parser.add_argument("--model", default="fcn_resnet101", type=str, help="model name")
+    parser.add_argument('--model', default='', type=str, help='Name of model to train')
+    parser.add_argument('--model_ckpt', default='', type=str, help='Model checkpoint to resume from')
+    parser.add_argument('--encoder', default='', type=str, help='Name of encoder')
+    parser.add_argument('--encoder_ckpt', default='', type=str, help='Encoder checkpoint to resume from')
     parser.add_argument("--aux_loss", action="store_true", help="auxiliary loss")
     parser.add_argument("--batch_size_per_gpu", default=8, type=int, help="batch size per gpu, the total batch size is $NGPU x batch_size")
     parser.add_argument("--epochs", default=30, type=int, help="number of total epochs to run")

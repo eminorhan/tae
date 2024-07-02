@@ -489,3 +489,9 @@ def vit_recognition_numpatches256_vocab64_base(num_classes=None):
 def vit_recognition_numpatches256_vocab256_base(num_classes=None):
     model = VITForRecognition(num_patches=256, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
+
+
+# vit for segmentation
+def vit_segmentation_numpatches256_vocab64_base(num_classes=None):
+    model = VITForSegmentation(num_patches=256, vocab_size=64, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
