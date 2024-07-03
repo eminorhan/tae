@@ -357,6 +357,7 @@ class VITForSegmentation(nn.Module):
 
         self.aux_depth = int(decoder_depth * 0.75)
         self.patch_size = patch_size
+        self.num_classes = num_classes
 
         # --------------------------------------------------------------------------
         self.decoder_embed = nn.Linear(vocab_size, decoder_embed_dim, bias=True)
@@ -396,9 +397,9 @@ class VITForSegmentation(nn.Module):
         h = w = int(x.shape[1]**.5)
         assert h * w == x.shape[1]
         
-        x = x.reshape(shape=(x.shape[0], h, w, p, p, 3))
+        x = x.reshape(shape=(x.shape[0], h, w, p, p, self.num_classes))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
+        imgs = x.reshape(shape=(x.shape[0], self.num_classes, h * p, h * p))
         return imgs
 
     def forward(self, x):
@@ -424,6 +425,8 @@ class VITForSegmentation(nn.Module):
 
         result["out"] = x
         result["aux"] = aux
+
+        print(x.shape, aux.shape)
 
         return result
 

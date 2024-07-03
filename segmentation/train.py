@@ -1,21 +1,23 @@
 import datetime
 import os
+import sys
 import time
 import argparse
-
 import presets
 import torch
 import torchvision
 import utils
+
 from torch import nn
-from .. import tae
-from ..util import misc as misc
 from coco_utils import get_coco
 from pathlib import Path
-
-from ..util.misc import NativeScalerWithGradNormCount as NativeScaler
 from torch.utils.data import RandomSampler, SequentialSampler
 from torch.utils.data import DataLoader
+
+sys.path.insert(0, os.path.abspath('..'))
+import tae
+from util import misc as misc
+from util.misc import NativeScalerWithGradNormCount as NativeScaler
 
 
 def get_dataset(args, is_train):
@@ -39,9 +41,9 @@ def get_dataset(args, is_train):
 
 def get_transform(is_train):
     if is_train:
-        return presets.SegmentationPresetTrain(base_size=520, crop_size=480)
+        return presets.SegmentationPresetTrain(base_size=288, crop_size=256)
     else:
-        return presets.SegmentationPresetEval(base_size=520)
+        return presets.SegmentationPresetEval(base_size=256)
 
 
 def criterion(inputs, target):
@@ -83,7 +85,7 @@ def evaluate(model, encoder, data_loader, device_model, device_encoder, num_clas
     return confmat
 
 
-def train_one_epoch(model, encoder, criterion, optimizer, data_loader, lr_scheduler, device_model, device_encoder, epoch, print_freq, scaler=None):
+def train_one_epoch(model, encoder, optimizer, data_loader, lr_scheduler, device_model, device_encoder, epoch, print_freq, loss_scaler):
 
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -105,13 +107,7 @@ def train_one_epoch(model, encoder, criterion, optimizer, data_loader, lr_schedu
             loss = criterion(output, target)
 
         optimizer.zero_grad()
-        if scaler is not None:
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            loss.backward()
-            optimizer.step()
+        loss_scaler(loss, optimizer, parameters=model.parameters())
 
         lr_scheduler.step()
 
@@ -155,7 +151,6 @@ def main(args):
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1)
-    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     loss_scaler = NativeScaler()
 
     # optionally load model and encoder (a bit ugly and hacky atm)
@@ -167,7 +162,7 @@ def main(args):
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
 
-        train_one_epoch(model, encoder, criterion, optimizer, train_loader, scheduler, device_model, device_encoder, epoch, args.print_freq, loss_scaler)
+        train_one_epoch(model, encoder, optimizer, train_loader, scheduler, device_model, device_encoder, epoch, args.print_freq, loss_scaler)
         confmat = evaluate(model, encoder, val_loader, device_model, device_encoder, num_classes)
 
         print(confmat)

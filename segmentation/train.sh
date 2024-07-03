@@ -2,9 +2,9 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=240GB
+#SBATCH --mem=300GB
 #SBATCH --time=00:15:00
 #SBATCH --job-name=train_segmentation
 #SBATCH --output=train_segmentation_%A_%a.out
@@ -33,7 +33,7 @@ srun python -u train.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
 	--model vit_segmentation_numpatches256_vocab64_base \
-	--model_ckpt /scratch/eo41/tae/outputs_recognition/${MODEL}/imagenet_21k_vit_recognition_numpatches256_vocab64_base_checkpoint.pth \
+	--model_ckpt '' \
 	--batch_size_per_gpu 16 \
 	--lr 0.02 \
 	--aux_loss
