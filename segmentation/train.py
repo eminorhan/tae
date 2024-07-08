@@ -85,7 +85,7 @@ def evaluate(model, encoder, data_loader, device_model, device_encoder, num_clas
     return confmat
 
 
-def train_one_epoch(model, encoder, optimizer, data_loader, lr_scheduler, device_model, device_encoder, epoch, print_freq, loss_scaler):
+def train_one_epoch(model, encoder, optimizer, data_loader, device_model, device_encoder, epoch, print_freq, loss_scaler):
 
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -108,8 +108,6 @@ def train_one_epoch(model, encoder, optimizer, data_loader, lr_scheduler, device
 
         optimizer.zero_grad()
         loss_scaler(loss, optimizer, parameters=model.parameters())
-
-        lr_scheduler.step()
 
         metric_logger.update(loss=loss.item(), lr=optimizer.param_groups[0]["lr"])
 
@@ -150,7 +148,7 @@ def main(args):
     # set wd as 0 for bias and norm layers
     param_groups = misc.add_weight_decay(model, args.weight_decay, bias_wd=False)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95), fused=True)  # setting fused True for faster updates (hopefully)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=90, gamma=0.1)
     loss_scaler = NativeScaler()
 
     # optionally load model and encoder (a bit ugly and hacky atm)
@@ -162,7 +160,7 @@ def main(args):
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
 
-        train_one_epoch(model, encoder, optimizer, train_loader, scheduler, device_model, device_encoder, epoch, args.print_freq, loss_scaler)
+        train_one_epoch(model, encoder, optimizer, train_loader, device_model, device_encoder, epoch, args.print_freq, loss_scaler)
         confmat = evaluate(model, encoder, val_loader, device_model, device_encoder, num_classes)
 
         print(confmat)
@@ -176,6 +174,9 @@ def main(args):
         }
 
         utils.save_on_master(checkpoint, os.path.join(args.output_dir, "checkpoint.pth"))
+
+        # increment lr scheduler
+        lr_scheduler.step()
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))

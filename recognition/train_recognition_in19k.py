@@ -9,9 +9,8 @@ print(torch.__version__)
 import torch.backends.cudnn as cudnn
 import webdataset as wds
 import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, SequentialSampler
 
+sys.path.insert(0, os.path.abspath('..'))
 import tae
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler

@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from torch.utils.data.dataloader import default_collate
 from torchvision.transforms.functional import InterpolationMode
 
+sys.path.insert(0, os.path.abspath('..'))
 import tae
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler

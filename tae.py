@@ -426,8 +426,6 @@ class VITForSegmentation(nn.Module):
         result["out"] = x
         result["aux"] = aux
 
-        print(x.shape, aux.shape)
-
         return result
 
 

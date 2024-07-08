@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
 #SBATCH --time=168:00:00
-#SBATCH --job-name=train_recognition_noncached_heavyreg_nowds
-#SBATCH --output=train_recognition_noncached_heavyreg_nowds_%A_%a.out
+#SBATCH --job-name=train_recognition_in1k
+#SBATCH --output=train_recognition_in1k_%A_%a.out
 #SBATCH --array=1
 
 MODELS=(
@@ -27,7 +27,7 @@ MODELS=(
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
-srun python -u ../train_recognition_noncached_heavyreg_nowds.py \
+srun python -u ../train_recognition_in1k.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
 	--model vit_recognition_numpatches256_vocab64_base \
