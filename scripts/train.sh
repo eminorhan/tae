@@ -5,16 +5,17 @@
 #SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=240GB
-#SBATCH --time=168:00:00
+#SBATCH --time=00:10:00
 #SBATCH --job-name=train_tae_wds
 #SBATCH --output=train_tae_wds_%A_%a.out
-#SBATCH --array=0-11
+#SBATCH --array=0
 
 export MASTER_ADDR=$(hostname -s)
 export MASTER_PORT=$(shuf -i 10000-65500 -n 1)
 export WORLD_SIZE=1
 
 MODELS=(
+	tae_patch8_vocab4_px256
 	tae_patch16_vocab16_px256
 	tae_patch16_vocab64_px256
 	tae_patch16_vocab256_px256

@@ -429,6 +429,11 @@ class VITForSegmentation(nn.Module):
         return result
 
 
+# patch 8
+def tae_patch8_vocab4_px256():
+    model = TAE(patch_size=8, vocab_size=4, img_size=256, embed_dim=512, depth=8, num_heads=8, decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=8, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
+    return model
+
 # patch 16
 def tae_patch16_vocab16_px256():
     model = TAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=1024, depth=15, num_heads=16, decoder_embed_dim=1024, decoder_depth=15, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
