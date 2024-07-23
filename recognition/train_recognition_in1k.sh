@@ -27,7 +27,7 @@ MODELS=(
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
-srun python -u ../train_recognition_in1k.py \
+srun python -u train_recognition_in1k.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
 	--model vit_recognition_numpatches256_vocab64_base \

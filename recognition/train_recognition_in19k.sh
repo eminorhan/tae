@@ -8,7 +8,7 @@
 #SBATCH --time=168:00:00
 #SBATCH --job-name=train_recognition_in19k
 #SBATCH --output=train_recognition_in19k_%A_%a.out
-#SBATCH --array=2
+#SBATCH --array=0-11
 
 MODELS=(
 	tae_patch16_vocab16_px256
@@ -27,7 +27,7 @@ MODELS=(
 
 MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
-srun python -u ../train_recognition_in19k.py \
+srun python -u train_recognition_in19k.py \
 	--encoder ${MODEL} \
 	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
 	--model vit_recognition_numpatches256_vocab256_base \
@@ -41,8 +41,8 @@ srun python -u ../train_recognition_in19k.py \
 	--num_its 500001 \
 	--num_workers 16 \
 	--save_freq 100000 \
-	--output_dir /scratch/eo41/tae/outputs_recognition/${MODEL} \
+	--output_dir /scratch/eo41/tae/outputs_recognition/in19k/${MODEL} \
 	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
-	--save_prefix imagenet_21k
+	--save_prefix in19k
 
 echo "Done"
