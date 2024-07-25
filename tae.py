@@ -428,8 +428,9 @@ class VITForSegmentation(nn.Module):
 
         return result
 
-
-# patch 16
+# ============================== MODEL ARCHITECTURE LIST ==============================
+# ************** TAE **************
+# patch: 16 x 16
 def tae_patch16_vocab16_px256():
     model = TAE(patch_size=16, vocab_size=16, img_size=256, embed_dim=1024, depth=15, num_heads=16, decoder_embed_dim=1024, decoder_depth=15, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
@@ -442,7 +443,7 @@ def tae_patch16_vocab256_px256():
     model = TAE(patch_size=16, vocab_size=256, img_size=256, embed_dim=1024, depth=15, num_heads=16, decoder_embed_dim=1024, decoder_depth=15, decoder_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
 
-# patch 32
+# patch: 32 x 32
 def tae_patch32_vocab64_px256():
     model = TAE(patch_size=32, vocab_size=64, img_size=256, embed_dim=2048, depth=18, num_heads=32, decoder_embed_dim=2048, decoder_depth=18, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
@@ -455,7 +456,7 @@ def tae_patch32_vocab1024_px256():
     model = TAE(patch_size=32, vocab_size=1024, img_size=256, embed_dim=2048, depth=18, num_heads=32, decoder_embed_dim=2048, decoder_depth=18, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
 
-# patch 64
+# patch: 64 x 64
 def tae_patch64_vocab256_px256():
     model = TAE(patch_size=64, vocab_size=256, img_size=256, embed_dim=2560, depth=21, num_heads=32, decoder_embed_dim=2560, decoder_depth=21, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
@@ -468,7 +469,7 @@ def tae_patch64_vocab4096_px256():
     model = TAE(patch_size=64, vocab_size=4096, img_size=256, embed_dim=2560, depth=21, num_heads=32, decoder_embed_dim=2560, decoder_depth=21, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
 
-# patch 128
+# patch: 128 x 128
 def tae_patch128_vocab1024_px256():
     model = TAE(patch_size=128, vocab_size=1024, img_size=256, embed_dim=2560, depth=22, num_heads=32, decoder_embed_dim=2560, decoder_depth=22, decoder_num_heads=32, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6))
     return model
@@ -482,7 +483,8 @@ def tae_patch128_vocab16384_px256():
     return model
 
 
-# vit for recognition
+# ************** RECOGNITION **************
+# patch: 16 x 16
 def vit_recognition_numpatches256_vocab16_base(num_classes=None):
     model = VITForRecognition(num_patches=256, vocab_size=16, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
@@ -495,7 +497,7 @@ def vit_recognition_numpatches256_vocab256_base(num_classes=None):
     model = VITForRecognition(num_patches=256, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
 
-
+# patch: 32 x 32
 def vit_recognition_numpatches64_vocab64_base(num_classes=None):
     model = VITForRecognition(num_patches=64, vocab_size=64, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
@@ -508,7 +510,7 @@ def vit_recognition_numpatches64_vocab1024_base(num_classes=None):
     model = VITForRecognition(num_patches=64, vocab_size=1024, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
 
-
+# patch: 64 x 64
 def vit_recognition_numpatches16_vocab256_base(num_classes=None):
     model = VITForRecognition(num_patches=16, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
@@ -521,7 +523,7 @@ def vit_recognition_numpatches16_vocab4096_base(num_classes=None):
     model = VITForRecognition(num_patches=16, vocab_size=4096, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
 
-
+# patch: 128 x 128
 def vit_recognition_numpatches4_vocab1024_base(num_classes=None):
     model = VITForRecognition(num_patches=4, vocab_size=1024, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
@@ -535,7 +537,55 @@ def vit_recognition_numpatches4_vocab16384_base(num_classes=None):
     return model
 
 
-# vit for segmentation
+# ************** SEGMENTATION **************
+# patch: 16 x 16
+def vit_segmentation_numpatches256_vocab16_base(num_classes=None):
+    model = VITForSegmentation(num_patches=256, vocab_size=16, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
 def vit_segmentation_numpatches256_vocab64_base(num_classes=None):
     model = VITForSegmentation(num_patches=256, vocab_size=64, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches256_vocab256_base(num_classes=None):
+    model = VITForSegmentation(num_patches=256, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+# patch: 32 x 32
+def vit_segmentation_numpatches64_vocab64_base(num_classes=None):
+    model = VITForSegmentation(num_patches=64, vocab_size=64, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches64_vocab256_base(num_classes=None):
+    model = VITForSegmentation(num_patches=64, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches64_vocab1024_base(num_classes=None):
+    model = VITForSegmentation(num_patches=64, vocab_size=1024, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+# patch: 64 x 64
+def vit_segmentation_numpatches16_vocab256_base(num_classes=None):
+    model = VITForSegmentation(num_patches=16, vocab_size=256, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches16_vocab1024_base(num_classes=None):
+    model = VITForSegmentation(num_patches=16, vocab_size=1024, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches16_vocab4096_base(num_classes=None):
+    model = VITForSegmentation(num_patches=16, vocab_size=4096, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+# patch: 128 x 128
+def vit_segmentation_numpatches4_vocab1024_base(num_classes=None):
+    model = VITForSegmentation(num_patches=4, vocab_size=1024, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches4_vocab4096_base(num_classes=None):
+    model = VITForSegmentation(num_patches=4, vocab_size=4096, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
+    return model
+
+def vit_segmentation_numpatches4_vocab16384_base(num_classes=None):
+    model = VITForSegmentation(num_patches=4, vocab_size=16384, decoder_embed_dim=768, decoder_depth=12, decoder_num_heads=12, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), num_classes=num_classes)
     return model
