@@ -40,7 +40,7 @@ MODELS=(
 	vit_recognition_numpatches4_vocab4096_base
 	vit_recognition_numpatches4_vocab16384_base
 )
-MODEL=${MODEL[$SLURM_ARRAY_TASK_ID]}
+MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
 
 srun python -u train_recognition_in19k.py \
 	--encoder ${ENCODER} \
