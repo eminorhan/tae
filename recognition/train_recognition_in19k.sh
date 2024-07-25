@@ -10,7 +10,7 @@
 #SBATCH --output=train_recognition_in19k_%A_%a.out
 #SBATCH --array=0-11
 
-MODELS=(
+ENCODERS=(
 	tae_patch16_vocab16_px256
 	tae_patch16_vocab64_px256
 	tae_patch16_vocab256_px256
@@ -24,13 +24,28 @@ MODELS=(
 	tae_patch128_vocab4096_px256
 	tae_patch128_vocab16384_px256
 )
+ENCODER=${ENCODERS[$SLURM_ARRAY_TASK_ID]}
 
-MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
+MODELS=(
+	vit_recognition_numpatches256_vocab16_base
+	vit_recognition_numpatches256_vocab64_base
+	vit_recognition_numpatches256_vocab256_base
+	vit_recognition_numpatches64_vocab64_base
+	vit_recognition_numpatches64_vocab256_base
+	vit_recognition_numpatches64_vocab1024_base
+	vit_recognition_numpatches16_vocab256_base
+	vit_recognition_numpatches16_vocab1024_base
+	vit_recognition_numpatches16_vocab4096_base
+	vit_recognition_numpatches4_vocab1024_base
+	vit_recognition_numpatches4_vocab4096_base
+	vit_recognition_numpatches4_vocab16384_base
+)
+MODEL=${MODEL[$SLURM_ARRAY_TASK_ID]}
 
 srun python -u train_recognition_in19k.py \
-	--encoder ${MODEL} \
-	--encoder_ckpt /scratch/eo41/tae/outputs/${MODEL}/${MODEL}_checkpoint.pth \
-	--model vit_recognition_numpatches256_vocab256_base \
+	--encoder ${ENCODER} \
+	--encoder_ckpt /scratch/eo41/tae/outputs/${ENCODER}/${ENCODER}_checkpoint.pth \
+	--model ${MODEL} \
 	--model_ckpt '' \
 	--num_classes 19167 \
 	--batch_size 896 \
