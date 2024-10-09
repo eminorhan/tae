@@ -138,7 +138,7 @@ def main(args):
     for epoch in range(args.epochs):
         for it, (samples, targets) in enumerate(train_loader):
             with torch.no_grad():
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast('cuda'):
                     samples = samples.to(device_encoder, non_blocking=True)
                     samples = encoder.forward_encoder(samples)
 
@@ -146,7 +146,7 @@ def main(args):
             samples = samples.to(device_model, non_blocking=True)
             targets = targets.to(device_model, non_blocking=True)
 
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = model(samples)
                 loss = criterion(outputs, targets)
             
@@ -166,7 +166,7 @@ def main(args):
             metric_logger.update(loss=loss_value)
 
         # estimate eval loss
-        print(f"Iteration {it}, evaluating ...")
+        print(f"Epoch {epoch}, evaluating ...")
         test_stats = evaluate(val_loader, model, encoder, device_model, device_encoder)
         
         # save checkpoint only if eval_loss decreases
@@ -217,7 +217,7 @@ def evaluate(val_loader, model, encoder, device_model, device_encoder):
 
     for _, (samples, targets) in enumerate(val_loader):
 
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             samples = samples.to(device_encoder, non_blocking=True)
             samples = encoder.forward_encoder(samples)
 
@@ -226,7 +226,7 @@ def evaluate(val_loader, model, encoder, device_model, device_encoder):
         targets = targets.to(device_model, non_blocking=True)
 
         # compute loss
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             outputs = model(samples)
             loss = criterion(outputs, targets)
 

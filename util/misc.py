@@ -246,7 +246,7 @@ class NativeScalerWithGradNormCount:
     state_dict_key = "amp_scaler"
 
     def __init__(self):
-        self._scaler = torch.cuda.amp.GradScaler()
+        self._scaler = torch.amp.GradScaler('cuda')
 
     def __call__(self, loss, optimizer, clip_grad=None, parameters=None, create_graph=False, update_grad=True):
         self._scaler.scale(loss).backward(create_graph=create_graph)
@@ -309,7 +309,7 @@ def load_model(ckpt, model_without_ddp, optimizer=None, loss_scaler=None, optim_
         if ckpt.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(ckpt, map_location='cpu', check_hash=True)
         else:
-            checkpoint = torch.load(ckpt, map_location='cpu')
+            checkpoint = torch.load(ckpt, weights_only=True, map_location='cpu')
 
         # interpolate position embeddings
         interpolate_pos_embed(model_without_ddp, checkpoint['model'])        
