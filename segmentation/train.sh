@@ -2,13 +2,13 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:h100:2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=300GB
-#SBATCH --time=00:05:00
+#SBATCH --time=168:00:00
 #SBATCH --job-name=train_segmentation
 #SBATCH --output=train_segmentation_%A_%a.out
-#SBATCH --array=1
+#SBATCH --array=0-11
 
 ENCODERS=(
 	tae_patch16_vocab16_px256

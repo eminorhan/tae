@@ -90,7 +90,7 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     loss_scaler = NativeScaler()
 
-    misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler)
+    misc.load_model(args.model_ckpt, model, optimizer=optimizer, loss_scaler=loss_scaler, optim_resume=True)
     misc.load_model(args.encoder_ckpt, encoder)
 
     model.train()

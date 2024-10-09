@@ -52,10 +52,10 @@ srun python -u train_recognition_in19k.py \
 	--input_size 256 \
 	--max_lr 0.0001 \
 	--min_lr 0.00001 \
-	--switch_it 400000 \
-	--num_its 500001 \
+	--switch_it 500000 \
+	--num_its 600001 \
 	--num_workers 16 \
-	--save_freq 100000 \
+	--save_freq 50000 \
 	--output_dir /scratch/eo41/tae/outputs_recognition/in19k/${MODEL} \
 	--train_data_path "/scratch/projects/lakelab/data_frames/imagenet-21k-wds/imagenet_w21-train-{0000..2047}.tar" \
 	--save_prefix in19k

@@ -101,7 +101,7 @@ def main(args):
 
     # define the model (a bit ugly and hacky atm)
     if args.model_ckpt:
-        model = tae.__dict__[args.model](num_classes=19167)  # load imagenet-21k pretrained checkpoint
+        model = tae.__dict__[args.model](num_classes=19167)  # load imagenet-19k pretrained checkpoint
     else:
         model = tae.__dict__[args.model](num_classes=args.num_classes)
     model.to(device_model)
@@ -239,9 +239,7 @@ def evaluate(val_loader, model, encoder, device_model, device_encoder):
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'.format(
-        top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss
-        ))
+    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'.format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
